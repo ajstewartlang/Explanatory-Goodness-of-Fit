@@ -19,6 +19,12 @@ anova (model.with.interaction, model.without.interaction)
 #interaction not significant so look at parameter estimates for model without the interaction term
 summary (model.without.interaction)
 
+#note, if we drop random slopes, then we have a significant model, but given what Barr et al. write
+#about the type 1 error increase one gets from intercept only random effects, I'm not sure
+#to what extent we can rely on this
+model.without.interaction.no.slopes <- lmer (Consequent ~ Accepts + Confident + (1|P.s) + (1| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000)))
+summary (model.without.interaction.no.slopes)
+
 #let's also look at the model where our condition (High vs. Low Goodness of Fit) is one categorical predictor
 #full model does not converge
 model.with.condition <- lmer (Consequent ~ Fit  + (1+Fit|P.s) + (1|Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000))) 

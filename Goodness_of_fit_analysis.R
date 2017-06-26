@@ -10,15 +10,15 @@
 index <- RPs_plus_ratings$Item != "9" 
 
 #IGNORE THE FOLLOWING - IT DOESN'T MAKE SENSE FOR A CONTINUOUS PRODICTOR TO BE USED IN A RANDOM EFFECT STRUCTURE
-#first let's look at the models with our two offline predictors (Accepts - how acceptable the explanation is - and
-#Confident - how confident people are in their ratings) 
-#note that the following models have the most complex random effects structures that converge
-#model.with.interaction <- lmer (Consequent ~ Accepts * Confident + (1+Accepts+Confident|P.s) + (1+Accepts| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000))) 
-#model.without.interaction <- lmer (Consequent ~ Accepts + Confident + (1+Accepts+Confident|P.s) + (1+Accepts| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000)))
-#anova (model.with.interaction, model.without.interaction)
+     #first let's look at the models with our two offline predictors (Accepts - how acceptable the explanation is - and
+     #Confident - how confident people are in their ratings) 
+     #note that the following models have the most complex random effects structures that converge
+     #model.with.interaction <- lmer (Consequent ~ Accepts * Confident + (1+Accepts+Confident|P.s) + (1+Accepts| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000))) 
+     #model.without.interaction <- lmer (Consequent ~ Accepts + Confident + (1+Accepts+Confident|P.s) + (1+Accepts| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000)))
+     #anova (model.with.interaction, model.without.interaction)
 
-#interaction not significant so look at parameter estimates for model without the interaction term
-#summary (model.without.interaction)
+     #interaction not significant so look at parameter estimates for model without the interaction term
+     #summary (model.without.interaction)
 
 #this is the sensible way to do it with continuous predictors - just with random intercepts
 model.with.interaction.no.slopes <- lmer (Consequent ~ Accepts * Confident + (1|P.s) + (1| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000)))

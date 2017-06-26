@@ -2,7 +2,7 @@
 
 #in the following analyses, we first look at how the eye-movement data (regression path times) are
 #predicted first by our offline data, and then by our condition as a categorical predictor
-#Note, the first model isn't significant - the t-value of our continuosu predictor (Accepts) in the first model is (t=1.665)
+#Note, the first model isn't significant - the t-value of our continuosu predictor (Accepts) in the first model is (t=1.660)
 #but there is a significant effect of our Condition (Fit) in the second model (t=2.292)
 
 #this excludes item 9 as the critical sentence erroneously contains "knows" 

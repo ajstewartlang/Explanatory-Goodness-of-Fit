@@ -2,17 +2,17 @@
 
 #in the following analyses, we first look at how the eye-movement data (regression path times) are
 #predicted first by our offline data, and then by our condition as a categorical predictor
-#Note, the first model isn't significant - the t-value of our continuosu predictor (Accepts) in the first model is (t=1.665)
-#but there is a significant effect of our Condition (Fit) in the second model (t=2.292)
+#Note, the first model is significant - the t-value of our continuosu predictor (Accepts) in the first model is (t=2.496)
+#and there is a significant effect of our Condition (Fit) in the second model (t=2.292)
 
 #this excludes item 9 as the critical sentence erroneously contains "knows" 
 #rather than "thinks" - this is in contrast to all the others which involve "thinks"
 index <- RPs_plus_ratings$Item != "9" 
 
+#IGNORE THE FOLLOWING - IT DOESN'T MAKE SENSE FOR A CONTINUOUS PRODICTOR TO BE USED IN A RANDOM EFFECT STRUCTURE
 #first let's look at the models with our two offline predictors (Accepts - how acceptable the explanation is - and
 #Confident - how confident people are in their ratings) 
 #note that the following models have the most complex random effects structures that converge
-#IGNORE THE FOLLOWING - IT DOESN'T MAKE SENSE FOR A CONTINUOUS PRODICTOR TO BE USED IN A RANDOM EFFECT STRUCTURE
 #model.with.interaction <- lmer (Consequent ~ Accepts * Confident + (1+Accepts+Confident|P.s) + (1+Accepts| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000))) 
 #model.without.interaction <- lmer (Consequent ~ Accepts + Confident + (1+Accepts+Confident|P.s) + (1+Accepts| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000)))
 #anova (model.with.interaction, model.without.interaction)

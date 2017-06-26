@@ -85,13 +85,10 @@ summary (model.with.condition)
 
 #this excludes item 9 as the critical sentence erroneously contains "knows" 
 #rather than "thinks" - this is in contrast to all the others which involve "thinks"
-index <- TTs_plus_ratings$Item != "9" 
+index <- ROs_plus_ratings$Item != "9" 
 
-model.with.interaction <- glmer(Consequent ~ Accepts*Confident + (1+Accepts+Confident|P.s) + (1+Accepts| Item) , data = RO_plus_ratings [index,], family=binomial, control=glmerControl(optCtrl=list(maxfun=200000000))) 
-model.without.interaction <- glmer(Consequent ~ Accepts+Confident + (1+Accepts+Confident|P.s) + (1+Accepts| Item) , data = RO_plus_ratings [index,], family=binomial, control=glmerControl(optCtrl=list(maxfun=200000000))) 
-anova (model.with.interaction, model.without.interaction)
-
-#interaction not significant so look at parameter estimates for model without the interaction term
+#model with interaciton does not converge so just build model without interaction effect
+model.without.interaction <- glmer(Consequent ~ Accepts+Confident + (1+Accepts|P.s) + (1+Accepts| Item) , data = RO_plus_ratings [index,], family=binomial, control=glmerControl(optCtrl=list(maxfun=200000000))) 
 summary (model.without.interaction)
 
 #let's also look at the model where our condition (High vs. Low Goodness of Fit) is one categorical predictor

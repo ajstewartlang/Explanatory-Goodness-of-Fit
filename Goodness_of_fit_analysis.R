@@ -12,18 +12,26 @@ index <- RPs_plus_ratings$Item != "9"
 #first let's look at the models with our two offline predictors (Accepts - how acceptable the explanation is - and
 #Confident - how confident people are in their ratings) 
 #note that the following models have the most complex random effects structures that converge
-model.with.interaction <- lmer (Consequent ~ Accepts * Confident + (1+Accepts+Confident|P.s) + (1+Accepts| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000))) 
-model.without.interaction <- lmer (Consequent ~ Accepts + Confident + (1+Accepts+Confident|P.s) + (1+Accepts| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000)))
-anova (model.with.interaction, model.without.interaction)
+#IGNORE THE FOLLOWING - IT DOESN'T MAKE SENSE FOR A CONTINUOUS PRODICTOR TO BE USED IN A RANDOM EFFECT STRUCTURE
+#model.with.interaction <- lmer (Consequent ~ Accepts * Confident + (1+Accepts+Confident|P.s) + (1+Accepts| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000))) 
+#model.without.interaction <- lmer (Consequent ~ Accepts + Confident + (1+Accepts+Confident|P.s) + (1+Accepts| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000)))
+#anova (model.with.interaction, model.without.interaction)
 
 #interaction not significant so look at parameter estimates for model without the interaction term
-summary (model.without.interaction)
+#summary (model.without.interaction)
 
-#note, if we drop random slopes, then we have a significant model, but given what Barr et al. write
-#about the type 1 error increase one gets from intercept only random effects, I'm not sure
-#to what extent we can rely on this
+#this is the sensible way to do it with continuous predictors - just with random intercepts
+model.with.interaction.no.slopes <- lmer (Consequent ~ Accepts * Confident + (1|P.s) + (1| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000)))
 model.without.interaction.no.slopes <- lmer (Consequent ~ Accepts + Confident + (1|P.s) + (1| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000)))
+anova (model.with.interaction.no.slopes, model.without.interaction.no.slopes)
+
+#model with interaction doesn't improve fit (high correlation between predictors) so stick with 
+#model with just main effects
 summary (model.without.interaction.no.slopes)
+
+#also run model with just Accepts as single predictor
+model.without.interaction.no.slopes.accepts <- lmer (Consequent ~ Accepts  + (1|P.s) + (1| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000)))
+summary (model.without.interaction.no.slopes.accepts)
 
 #let's also look at the model where our condition (High vs. Low Goodness of Fit) is one categorical predictor
 #full model does not converge

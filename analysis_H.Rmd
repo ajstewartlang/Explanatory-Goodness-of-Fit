@@ -1,0 +1,71 @@
+---
+title: "R Notebook"
+output: 
+  html_notebook:
+    toc: yes
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+---
+
+
+
+
+```{r setup, results='hide', message=FALSE}
+require(dplyr)
+require(tidyr)
+require(stringr)
+require(ggplot2)
+require(afex)
+require(lattice)
+
+```
+
+
+# First pass reading time 
+
+## Data Preparation
+
+```{r}
+RPs_plus_ratings <- read.csv("RPs_plus_ratings.csv")
+RPs_plus_ratings$P.s <- factor(RPs_plus_ratings$P.s)
+RPs_plus_ratings$Item <- factor(RPs_plus_ratings$Item)
+drp_r <- droplevels(RPs_plus_ratings[RPs_plus_ratings$Item != "9" ,])
+nas <- is.na(drp_r$Antecedent) | is.na(drp_r$Consequent)
+drp_r <- droplevels(drp_r[!nas,])
+
+```
+
+After loading the data we remove `r sum(nas)` trials with missing data in either Antecedent or Consequent. Then we transform all RTs from ms to s and calculate transformed versions using either `log` or the inverse transformation. We also z-transform the numeric variables `Accepts` and `Confident`.
+
+```{r}
+drp_r <- drp_r %>%
+  mutate(
+    antecedent = Antecedent/1000,
+    log_ant = log(antecedent),
+    inv_ant = 1/antecedent,
+    consequent = Consequent/1000,
+    log_con = log(consequent),
+    inv_con = 1/consequent,
+    spillover = spillover/1000,
+    acc_z = (Accepts - mean(Accepts))/sd(Accepts),
+    conf_z = (Confident- mean(Confident))/sd(Confident),
+    log_acc= log(Accepts))
+```
+
+We then plot the three versions of the DVs.
+
+```{r}
+dplot <- drp_r %>% 
+  gather("key", "value",antecedent:inv_con) %>% 
+  mutate(region = if_else(str_detect(key, "ant"), "antecedent", "consequent"), 
+         type = if_else(str_detect(key, "^log"), "log", 
+                        if_else(str_detect(key, "^inv"), "inverse", "original")))
+
+ggplot(data = dplot) +
+  geom_histogram(mapping = aes(x = value), bins = 75) + 
+  facet_grid(region ~ type)
+```
+
+As can be seen, the log transformatiom helps quite a bit in achieving approximate normality. Removing all trials with RTs above 3 seconds (consequent = `r round(mean(drp_r$consequent > 3), 2)`, antecedent = `r round(mean(drp_r$antecedent > 3), 2)`) or above 2.5 seconds (consequent = `r round(mean(drp_r$consequent > 2.5), 2)`, antecedent = `r round(mean(drp_r$antecedent > 2.5), 2)`) could be an alternative strategy.
+
+## Consequent
+

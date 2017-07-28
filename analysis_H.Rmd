@@ -484,7 +484,8 @@ pres_rp_a <- ggplot(data = drp_r, mapping = aes(x = Fit, y = log_spill)) +
 pres_rp_b <- ggplot(data = drp_r, mapping = aes(x = log_acc, y = log_spill)) +
   geom_point(alpha = 0.5) +
   geom_abline(intercept = coef_mfp_11$intercept, slope = coef_mfp_11$slope, alpha = 0.5)
-pres_rp_c <- ggplot(data = drp_r, mapping = aes(x = acc_z, y = log_con)) +
+
+pres_rp_c <- ggplot(data = drp_r, mapping = aes(x = acc_z, y = log_spill)) +
   geom_point(alpha = 0.5) +
   geom_abline(intercept = coef_mfp_22$P.s$`(Intercept)`, slope = coef_mfp_22$P.s$acc_z, alpha = 0.5) 
 

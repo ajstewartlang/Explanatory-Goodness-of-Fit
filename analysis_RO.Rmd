@@ -1,0 +1,288 @@
+---
+title: "Analysis of First Pass Regressions Out "
+author: "Henrik Singmann"
+output: 
+  html_notebook:
+    toc: yes
+    toc_float: true
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+---
+
+
+```{r setup, results='hide', message=FALSE}
+require(dplyr)
+require(tidyr)
+require(stringr)
+require(ggplot2)
+require(afex)
+require(lattice) # for qqmath
+require(gridExtra)
+theme_set(theme_minimal())
+require(optimx)
+require(DHARMa) # for residual analysis
+#require(binom)
+require(effects)
+```
+
+# Introduction
+
+The goal of the following analysis was to see whether the explanatory goodness of fit would affect the DVs. For detailed analysis of the IVs see other file.
+
+```{r}
+data_in <- read.csv("RO_plus_ratings.csv")
+data_in$P.s <- factor(data_in$P.s)
+data_in$Item <- factor(data_in$Item)
+```
+
+
+# First pass Regression Outs
+
+## Data Preparation
+
+```{r}
+drp_r <- droplevels(data_in[data_in$Item != "9" ,])
+nas <- is.na(drp_r$spillover) | is.na(drp_r$Consequent)
+drp_r <- droplevels(drp_r[!nas,])
+
+```
+
+For the analysis we remove `r sum(nas)` trials with missing data in either spillover or Consequent. Then we z-transform the continuous `Accepts` variable.
+
+```{r}
+drp_r <- drp_r %>%
+  mutate(
+    acc_z = (Accepts - mean(Accepts))/sd(Accepts))
+    #conf_z = (Confident- mean(Confident))/sd(Confident))
+```
+
+
+# Consequent
+
+Note that the maximal model for models including `Fit` have random slopes for `Fit` for both random effects grouping factors (i.e., participant `P.s` and `Item`). For models including the continuous fit measure `Accepts` we have by-participant random slopes for `Accepts`, but by-item random slopes for `Fit` (as `Accepts` has only two different values for each `Item`,  using the binary `Fit` variable seems more reasonable.)
+
+
+```{r, fig.width=6, fig.height=4}
+
+agg <- drp_r %>% 
+  group_by(P.s, Fit) %>% 
+  summarise(prob_consequent = mean(Consequent),
+            prob_spillover = mean(spillover),
+            consequent = sum(Consequent),
+            spillover = sum(spillover),
+            n = n()) %>% 
+  ungroup 
+
+p_obs_acc <- ggplot(data = drp_r, aes(x = acc_z, y = Consequent)) +
+  geom_point()
+
+p_obs_fit <- ggplot(agg, aes(x = Fit, y = prob_consequent)) +
+  geom_boxplot() +
+   stat_summary(fun.y = "mean", colour = "red", size = 2, geom = "point")
+grid.arrange(p_obs_fit, p_obs_acc, ncol = 2)
+
+```
+
+
+## With Fit
+
+```{r}
+m_con_f_1 <- mixed(Consequent ~ Fit + (Fit|P.s) + (Fit| Item), drp_r, family = binomial, method = "LRT", progress = FALSE)
+summary(m_con_f_1)
+```
+
+The correlations between the random effects parameters are at the boundary of the parameter space, consequently we remove those.
+
+```{r}
+m_con_f_2 <- mixed(Consequent ~ Fit + (Fit||P.s) + (Fit|| Item), drp_r, family = binomial, method = "LRT", progress = FALSE, expand_re = TRUE)
+summary(m_con_f_2)
+```
+Now the by-participant random slope for `Fit` is very small, so we consequently refit the model without that parameter, we also try all available optimizer to see if this helps.
+
+```{r}
+m_con_f_3 <- mixed(Consequent ~ Fit + (1|P.s) + (Fit|| Item), drp_r, family = binomial, method = "LRT", progress = FALSE, expand_re = TRUE, all_fit = TRUE)
+summary(m_con_f_3)
+```
+
+Overall, the final model seems to provide the best account (i.e., is the optimal model).
+
+```{r}
+anova(m_con_f_1, m_con_f_2, m_con_f_3)
+```
+
+Is there are large difference between the different optimizers? No, all optimizers fit the models basically identically. 
+
+```{r}
+attr(m_con_f_3, "all_fit_logLik")
+```
+
+
+We also perform some graphical model fit tests (using `DHARMa`, see: https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html) which suggest the model is without large problems (i.e., for the QQ-plot the residuals are on the main diagonal and for the residuals versus predicted the red lines are straight and at .25, .5 and .75).
+
+
+```{r, fig.width=8, fig.height=4}
+sim_m_con_f_3 <- simulateResiduals(fittedModel = m_con_f_3$full_model, n = 250)
+plotSimulatedResiduals(sim_m_con_f_3)
+```
+
+Interestingly, only for the optimal model but not for the maximal model is the effetc of Fit significant.
+
+```{r}
+nice(m_con_f_1)
+nice(m_con_f_3)
+```
+
+## With Accepts (non-transformed)
+
+```{r}
+m_con_a_1 <- mixed(Consequent ~ acc_z + (acc_z|P.s) + (Fit| Item), drp_r, family = binomial, method = "LRT", progress = FALSE)
+summary(m_con_a_1)
+```
+
+We see a suspcisouly high correlations between for both random effect grouping factors, consequently we remove those.
+
+
+```{r}
+m_con_a_2 <- mixed(Consequent ~ acc_z + (acc_z||P.s) + (Fit|| Item), drp_r, family = binomial, method = "LRT", progress = FALSE, expand_re = TRUE, all_fit = TRUE)
+summary(m_con_a_2)
+```
+
+Given the small estimate of the by-participant random slope we remove it.
+
+```{r}
+m_con_a_3 <- mixed(Consequent ~ acc_z + (1|P.s) + (Fit|| Item), drp_r, family = binomial, method = "LRT", progress = FALSE, expand_re = TRUE, all_fit = TRUE)
+summary(m_con_a_3)
+```
+
+```{r}
+anova(m_con_a_1, m_con_a_2, m_con_a_3)
+```
+
+Again, the reduced model seems to be the optimal model. Consequently we also inspect the residuals of this model. Overall this also looks very reasonable.
+
+```{r, fig.width=8, fig.height=4}
+sim_m_con_a_3 <- simulateResiduals(fittedModel = m_con_a_3$full_model, n = 500)
+plotSimulatedResiduals(sim_m_con_a_3)
+```
+
+Interestingly, neither model shows a significant effect of `Accepts` (z-transformed to `acc_z`). 
+
+```{r}
+nice(m_con_a_1)
+nice(m_con_a_3)
+```
+
+This contrasts somewhat with the results of the Wald tests reported above which clearly show a significant effect of `acc_z`. Consequently, we repeated the analysis using parametric bootstrap. This also showed no effect of `acc_z`.
+
+```{r}
+m_con_a_3_pb <- mixed(Consequent ~ acc_z + (1|P.s) + (Fit|| Item), drp_r, family = binomial, method = "PB", progress = FALSE, expand_re = TRUE, all_fit = TRUE)
+nice(m_con_a_3_pb)
+```
+
+If we plot the estimated effect we can see that it indeed is small.
+
+```{r, fig.width=4, fig.height=3}
+plot(Effect("acc_z", m_con_a_3_pb$full_model, 
+            xlevels = list(acc_z = seq(-2.5, 2, by = 0.25))), 
+     ylim = c(0,1), type = "response")
+```
+
+
+
+# Spillover
+
+
+
+```{r, fig.width=6, fig.height=4}
+
+p_obs_acc <- ggplot(data = drp_r, aes(x = acc_z, y = spillover)) +
+  geom_point()
+
+p_obs_fit <- ggplot(agg, aes(x = Fit, y = prob_spillover)) +
+  geom_boxplot() +
+   stat_summary(fun.y = "mean", colour = "red", size = 2, geom = "point")
+grid.arrange(p_obs_fit, p_obs_acc, ncol = 2)
+
+```
+
+## With Fit
+
+```{r}
+m_spill_f_1 <- mixed(spillover ~ Fit + (Fit|P.s) + (Fit| Item), drp_r, family = binomial, method = "LRT", progress = FALSE)
+summary(m_spill_f_1)
+```
+
+Due to the large correlation between the by-participants and by-item random-effects parameters we refit the model without the correlations.
+
+```{r}
+m_spill_f_2 <- mixed(spillover ~ Fit + (Fit||P.s) + (Fit|| Item), drp_r, family = binomial, method = "LRT", progress = FALSE, expand_re = TRUE)
+summary(m_spill_f_2)
+```
+Now both random slopes are estimated to be zero, we consequently refit the model without those parameters.
+
+```{r}
+m_spill_f_3 <- mixed(spillover ~ Fit + (1|P.s) + (1| Item), drp_r, family = binomial, method = "LRT", progress = FALSE)
+summary(m_spill_f_3)
+```
+
+This model seems reasonable and only provides a minimally worse account than the first model.
+
+```{r}
+anova(m_spill_f_1, m_spill_f_3)
+```
+
+The diagnistic plots look again regularly.
+
+```{r, fig.width=8, fig.height=4}
+sim_m_spill_f_3 <- simulateResiduals(fittedModel = m_spill_f_3$full_model, n = 500)
+plotSimulatedResiduals(sim_m_spill_f_3)
+```
+
+
+The effect of Fit is significant for all models.
+
+```{r}
+nice(m_spill_f_1)
+nice(m_spill_f_3)
+```
+
+## With Accepts (non-transformed)
+
+```{r}
+m_spill_a_1 <- mixed(spillover ~ acc_z + (acc_z|P.s) + (Fit| Item), drp_r, family = binomial, method = "LRT", progress = FALSE)
+summary(m_spill_a_1)
+```
+
+Again we observe large correlations between the by-participants and by-item random-effects parameters and we refit the model without the correlations.
+
+```{r}
+m_spill_a_2 <- mixed(spillover ~ acc_z + (acc_z||P.s) + (Fit|| Item), drp_r, family = binomial, method = "LRT", progress = FALSE, expand_re = TRUE)
+summary(m_spill_a_2)
+```
+Aa one random slopes is estimated to be zero, we consequently refit the model without this parameter.
+
+```{r}
+m_spill_a_3 <- mixed(spillover ~ acc_z + (1|P.s) + (Fit|| Item), drp_r, family = binomial, method = "LRT", progress = FALSE, expand_re = TRUE)
+summary(m_spill_a_3)
+```
+
+This model seems reasonable and only provides a minimally worse account than the first model.
+
+```{r}
+anova(m_spill_a_1, m_spill_a_3)
+```
+
+No issue with the diagnostic plots.
+
+```{r, fig.width=8, fig.height=4}
+sim_m_spill_a_3 <- simulateResiduals(fittedModel = m_spill_a_3$full_model, n = 500)
+plotSimulatedResiduals(sim_m_spill_a_3)
+```
+
+
+The effect of `acc_z` is not significant in either model.
+
+```{r}
+nice(m_spill_a_1)
+nice(m_spill_a_3)
+```
+

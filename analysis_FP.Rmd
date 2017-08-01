@@ -1,0 +1,577 @@
+---
+title: "Analysis of First Pass Reading Times"
+author: "Henrik Singmann"
+output: 
+  html_notebook:
+    toc: yes
+    toc_float: true
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+---
+
+
+```{r setup, results='hide', message=FALSE}
+require(dplyr)
+require(tidyr)
+require(stringr)
+require(ggplot2)
+require(afex)
+require(lattice) # for qqmath
+require(gridExtra)
+library(ggthemes)
+theme_set(theme_minimal())
+
+```
+
+# Data Preparation
+
+```{r}
+data_in <- read.csv("FPs_plus_ratings.csv")
+data_in$P.s <- factor(data_in$P.s)
+data_in$Item <- factor(data_in$Item)
+drp_r <- droplevels(data_in[data_in$Item != "9" ,])
+nas <- is.na(drp_r$spillover) | is.na(drp_r$Consequent)
+drp_r <- droplevels(drp_r[!nas,])
+
+```
+
+For the analysis we remove `r sum(nas)` trials with missing data in either spillover or Consequent. Then we transform all RTs from ms to s and calculate transformed versions using either `log` or the inverse transformation. We also z-transform the continuous `Accepts` variable.
+
+```{r}
+drp_r <- drp_r %>%
+  mutate(
+    antecedent = Antecedent/1000,
+    log_ant = log(antecedent),
+    inv_ant = 1/antecedent,
+    consequent = Consequent/1000,
+    log_con = log(consequent),
+    inv_con = 1/consequent,
+    spillover = spillover/1000,
+    log_spill = log(spillover),
+    inv_spill = 1/spillover,
+    acc_z = (Accepts - mean(Accepts))/sd(Accepts),
+    #conf_z = (Confident- mean(Confident))/sd(Confident),
+    log_acc= log(Accepts))
+```
+
+We then plot the three versions of the DVs.
+
+```{r}
+dplot <- drp_r %>% 
+  gather("key", "value",consequent:inv_spill, spillover) %>% 
+  mutate(region = if_else(str_detect(key, "spill"), "spillover", "consequent"), 
+         type = if_else(str_detect(key, "^log"), "log", 
+                        if_else(str_detect(key, "^inv"), "inverse", "original")))
+
+ggplot(data = dplot) +
+  geom_histogram(mapping = aes(x = value), bins = 100) + 
+  facet_grid(region ~ type)
+```
+
+As can be seen, the log transformation helps quite a bit in achieving approximate normality for the consequent DV, but less for the spillover DV. For the `spillover` variable the untransformed DV may work better. For the untransformed values there are quite a few DVs above 5 seconds (consequent = `r round(mean(drp_r$consequent > 5), 2)`, spillover = `r round(mean(drp_r$spillover > 5), 2)`), above 3 seconds (consequent = `r round(mean(drp_r$consequent > 3), 2)`, spillover = `r round(mean(drp_r$spillover > 3), 2)`) or above 2.5 seconds (consequent = `r round(mean(drp_r$consequent > 2.5), 2)`, spillover = `r round(mean(drp_r$spillover > 2.5), 2)`).
+
+```{r}
+drp_r_r1 <- drp_r[drp_r$consequent < 2.5,]
+```
+
+
+# Consequent
+
+Note that the maximal model for models including `Fit` have random slopes for `Fit` for both random effects grouping factors (i.e., participant `P.s` and `Item`). For models including the continuous fit measure `Accepts` we have by-participant random slopes for `Accepts`, but by-item random slopes for `Fit` (as `Accepts` has only two different values for each `Item`,  using the binary `Fit` variable seems more reasonable.)
+
+## With Fit (log-transformed RTs)
+
+```{r}
+m_fp_con_1 <- mixed(log_con ~ Fit + (Fit|P.s) + (Fit| Item), drp_r, progress = FALSE)
+summary(m_fp_con_1)
+```
+
+Due to the extreme correlations between the by-participant and by-item intercept and slopes we refit the model without the correlations.
+
+```{r}
+m_fp_con_2 <- mixed(log_con ~ Fit + (Fit||P.s) + (Fit|| Item), drp_r, expand_re = TRUE, progress = FALSE)
+summary(m_fp_con_2)
+```
+
+Now the `Fit` random slopes show no variability so we consequently refit the model without that parameter.
+
+```{r}
+m_fp_con_3 <- mixed(log_con ~ Fit + (1|P.s) + (1| Item), drp_r, progress = FALSE)
+summary(m_fp_con_3)
+```
+
+This model seems reasonable and only provides a minimally worse account than the first model.
+
+```{r}
+anova(m_fp_con_1, m_fp_con_3)
+```
+
+However, the QQ-plot of both models shows relatively strong misfit for short RTs and somewhat less for long RTs. Significant outliers (i.e., observations with absolute standardized/normalized residuals greater than the .995 quantile of the standard normal distribution) are identified by the number of the participant providing this response.
+
+```{r, fig.width=8, fig.height=4}
+qqp_m1 <- qqmath(m_fp_con_1$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+qqp_m2 <- qqmath(m_fp_con_3$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+grid.arrange(qqp_m1, qqp_m2, ncol = 2)
+```
+
+The effect of `Fit` is not significant for both models.
+
+```{r}
+nice(m_fp_con_1)
+nice(m_fp_con_3)
+```
+
+## With Fit (untransformed RTs)
+
+```{r}
+m_con_u_1 <- mixed(consequent ~ Fit + (Fit|P.s) + (Fit| Item), drp_r, progress = FALSE)
+summary(m_con_u_1)
+```
+
+Due to the extreme correlations between the by-participant and by-item intercept and slopes we refit the model without the correlations.
+
+```{r}
+m_con_u_2 <- mixed(consequent ~ Fit + (Fit||P.s) + (Fit|| Item), drp_r, 
+                   progress = FALSE, expand_re = TRUE)
+summary(m_con_u_2)
+```
+
+Now the `Fit` random slopes show no variability so we consequently refit the model without that parameter.
+
+```{r}
+m_con_u_3 <- mixed(consequent ~ Fit + (1|P.s) + (1| Item), drp_r, progress = FALSE)
+summary(m_con_u_3)
+```
+
+This model seems reasonable and only provides a minimally worse account than the first model.
+
+```{r}
+anova(m_con_u_1, m_con_u_2, m_con_u_3)
+```
+
+However, the QQ-plot now shows the perhaps expected misfit for long RTs.
+
+```{r, fig.width=8, fig.height=4}
+qqp_m1 <- qqmath(m_con_u_1$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+qqp_m2 <- qqmath(m_con_u_3$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+grid.arrange(qqp_m1, qqp_m2, ncol = 2)
+```
+
+
+Again, the effect of `Fit` is not significant.
+
+```{r}
+nice(m_con_u_1)
+nice(m_con_u_3)
+```
+
+
+## With Fit (Lambert transformation)
+
+To address the remaining misfit I try a more drastic approach. First we remove a few (`r sum(drp_r$consequent > 2.5)`) RTs above 2.5 seconds. Then we apply the Lambert transformation to normalize the data (following Goerg, 2011).
+
+```{r}
+drp_r_r1 <- drp_r[drp_r$consequent < 2.5,]
+drp_r_r1$consequentw <- as.vector(LambertW::Gaussianize(drp_r_r1$consequent, 
+                                                        type = "h", method = "MLE"))
+```
+
+
+```{r}
+m_con_lamb_1 <- mixed(consequentw ~ Fit + (Fit|P.s) + (Fit| Item), drp_r_r1, progress = FALSE)
+summary(m_con_lamb_1)
+```
+
+We again remove the correlation parameters due to the extreme estimates.
+
+```{r}
+m_con_lamb_2 <- mixed(consequentw ~ Fit + (Fit||P.s) + (Fit || Item), drp_r_r1, 
+                      progress = FALSE, expand_re = TRUE)
+summary(m_con_lamb_2)
+```
+
+Now the by-item `Fit` random slope is estimated at 0 and we remove it.
+
+```{r}
+m_con_lamb_3 <- mixed(consequentw ~ Fit + (Fit||P.s) + (1| Item), drp_r_r1, 
+                      progress = FALSE, expand_re = TRUE)
+summary(m_con_lamb_3)
+```
+
+The most reduced model again provides the best account.
+
+```{r}
+anova(m_con_lamb_1, m_con_lamb_2, m_con_lamb_3)
+```
+
+Now the QQ-plot shows only mild violations of normality.
+
+```{r, fig.width=8, fig.height=4}
+qqp_m1 <- qqmath(m_con_lamb_1$full_model, id = 0.01, idLabels = as.character(drp_r_r1$P.s))
+qqp_m2 <- qqmath(m_con_lamb_3$full_model, id = 0.01, idLabels = as.character(drp_r_r1$P.s))
+grid.arrange(qqp_m1, qqp_m2, ncol = 2)
+```
+
+
+However, the effect of `Fit` is still not significant.
+
+```{r}
+nice(m_con_lamb_1)
+nice(m_con_lamb_1)
+```
+
+
+
+## With Accepts (log-transformed RT and Accepts)
+
+```{r}
+m_fp_con_11 <- mixed(log_con ~ log_acc + (log_acc|P.s) + (Fit| Item), drp_r, progress = FALSE)
+summary(m_fp_con_11)
+```
+
+As for the binary variable we see a extreme correlations between the random-effects parameters for both random-effects.
+
+
+```{r}
+m_fp_con_12 <- mixed(log_con ~ log_acc + (log_acc||P.s) + (Fit||Item), drp_r, expand_re = TRUE, progress = FALSE)
+summary(m_fp_con_12)
+```
+
+```{r}
+m_fp_con_13 <- mixed(log_con ~ log_acc + (0+log_acc|P.s) + (1|Item), drp_r, progress = FALSE)
+summary(m_fp_con_13)
+```
+
+```{r}
+anova(m_fp_con_11, m_fp_con_12, m_fp_con_13)
+```
+
+The most reduced model seems to provide the best account. However, we again see strong deviations from normality for slow RTs.
+
+```{r, fig.width=8, fig.height=4}
+qqp_11 <- qqmath(m_fp_con_11$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+qqp_12 <- qqmath(m_fp_con_13$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+grid.arrange(qqp_11, qqp_12, ncol = 2)
+```
+
+Again, neither model shows a significant effect of `log_acc`.
+
+```{r}
+nice(m_fp_con_11)
+nice(m_fp_con_12)
+```
+
+## With Accepts (log-transformed RTs)
+
+```{r}
+m_fp_con_21 <- mixed(log_con ~ acc_z + (acc_z|P.s) + (Fit| Item), drp_r, progress = FALSE)
+summary(m_fp_con_21)
+```
+
+We remove the correlations among the random effects.
+
+```{r}
+m_fp_con_22 <- mixed(log_con ~ acc_z + (acc_z||P.s) + (Fit||Item), drp_r, expand_re = TRUE, progress = FALSE)
+summary(m_fp_con_22)
+```
+
+```{r}
+m_fp_con_23 <- mixed(log_con ~ acc_z + (1|P.s) + (1|Item), drp_r, expand_re = FALSE, progress = FALSE)
+summary(m_fp_con_23)
+```
+
+```{r}
+anova(m_fp_con_21, m_fp_con_22, m_fp_con_23)
+```
+
+There is some difference between the maximal and the final reduced model. However, both models again show the problematic pattern in their QQ-plots.
+
+```{r, fig.width=8, fig.height=4}
+qqp_21 <- qqmath(m_fp_con_21$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+qqp_22 <- qqmath(m_fp_con_22$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+grid.arrange(qqp_21, qqp_22, ncol = 2)
+```
+
+Furthermore, neither model shows a significant effect of `Accepts` (z-transformed to `acc_z`).
+
+```{r}
+nice(m_fp_con_21)
+nice(m_fp_con_22)
+```
+
+## With Accepts (Lambert transformed RTs)
+
+```{r}
+m_con_lambert_a_1 <- mixed(consequentw ~ acc_z + (acc_z|P.s) + (Fit| Item), drp_r_r1, progress = FALSE)
+summary(m_con_lambert_a_1)
+```
+
+We remove the correlations among the random effects.
+
+```{r}
+m_con_lambert_a_2 <- mixed(consequentw ~ acc_z + (acc_z||P.s) + (Fit|| Item), drp_r_r1, progress = FALSE, expand_re = TRUE)
+summary(m_con_lambert_a_2)
+```
+
+```{r}
+m_con_lambert_a_3 <- mixed(consequentw ~ acc_z + (1|P.s) + (1| Item), drp_r_r1, progress = FALSE)
+summary(m_con_lambert_a_3)
+```
+
+```{r}
+anova(m_con_lambert_a_1, m_con_lambert_a_2, m_con_lambert_a_3)
+```
+
+Despite the correlation estimate of 1/-1, there seems to be some value in it. The QQ-plots show a only mild violations.
+
+```{r, fig.width=8, fig.height=4}
+qqp_21 <- qqmath(m_con_lambert_a_1$full_model, id = 0.01, idLabels = as.character(drp_r_r1$P.s))
+qqp_22 <- qqmath(m_con_lambert_a_3$full_model, id = 0.01, idLabels = as.character(drp_r_r1$P.s))
+grid.arrange(qqp_21, qqp_22, ncol = 2)
+```
+
+Furthermore, neither model shows a significant effect of `Accepts` (z-transformed to `acc_z`).
+
+```{r}
+nice(m_con_lambert_a_1)
+nice(m_con_lambert_a_3)
+```
+
+# Spillover
+
+## With Fit (log-transformed RTs)
+
+```{r}
+m_fp_spill_f_1 <- mixed(log_spill ~ Fit + (Fit|P.s) + (Fit| Item), drp_r, progress = FALSE)
+summary(m_fp_spill_f_1)
+```
+
+Due to the large correlation between the by-participants and by-item random-effects parameters we refit the model without the correlations.
+
+```{r}
+m_fp_spill_f_2 <- mixed(log_spill ~ Fit + (Fit||P.s) + (Fit||Item), drp_r, expand_re = TRUE, progress = FALSE)
+summary(m_fp_spill_f_2)
+```
+Now both random slopes are estimated to be zero, we consequently refit the model without those parameters.
+
+```{r}
+m_fp_spill_f_3 <- mixed(log_spill ~ Fit + (1|P.s) + (1| Item), drp_r, progress = FALSE)
+summary(m_fp_spill_f_3)
+```
+
+Again the final model appears to be the optimal model.
+
+```{r}
+anova(m_fp_spill_f_1, m_fp_spill_f_3)
+```
+
+The QQ-plot again shows a clear deviation from normality for fast responses.
+
+```{r, fig.width=8, fig.height=4}
+qqp_m1 <- qqmath(m_fp_spill_f_1$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+qqp_m2 <- qqmath(m_fp_spill_f_3$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+grid.arrange(qqp_m1, qqp_m2, ncol = 2)
+```
+
+
+The effect of `Fit` is not significant.
+
+```{r}
+nice(m_fp_spill_f_1)
+nice(m_fp_spill_f_3)
+```
+
+## With Fit (Lambert-transformed RTs)
+
+Due to the large misfit, we again try the Lambert transformation after removing 3 RTs we identified as outliers (based on preliminary analysis not reported here).
+
+```{r}
+out_spill <- (drp_r$P.s == "14" & drp_r$spillover < 0.5 ) |
+  (drp_r$P.s == "23" & drp_r$spillover > 6.0 )
+drp_r_r2 <- drp_r[!out_spill,]
+drp_r_r2$spilloverw <- as.vector(LambertW::Gaussianize(drp_r_r2$spillover, 
+                                                        type = "h", method = "MLE"))
+```
+
+
+```{r}
+m_fp_spill_a_1 <- mixed(spilloverw ~ Fit + (Fit|P.s) + (Fit| Item), drp_r_r2, progress = FALSE)
+summary(m_fp_spill_a_1)
+```
+
+Due to the large correlation between the by-participants and by-item random-effects parameters we refit the model without the correlations.
+
+```{r}
+m_fp_spill_a_2 <- mixed(spilloverw ~ Fit + (Fit||P.s) + (Fit|| Item), drp_r_r2, progress = FALSE, expand_re = TRUE)
+summary(m_fp_spill_a_2)
+```
+Now both random slopes are estimated to be virtually zero, we consequently refit the model without those parameters.
+
+```{r}
+m_fp_spill_a_3 <- mixed(spilloverw ~ Fit + (1|P.s) + (1| Item), drp_r_r2, progress = FALSE)
+summary(m_fp_spill_a_3)
+```
+
+Again the final model appears to be the optimal model.
+
+```{r}
+anova(m_fp_spill_a_1, m_fp_spill_a_2, m_fp_spill_a_3)
+```
+
+The QQ-plot now only shows comparatively mild violations at the edges.
+
+```{r, fig.width=8, fig.height=4}
+qqp_m1 <- qqmath(m_fp_spill_a_1$full_model, id = 0.01, idLabels = as.character(drp_r_r2$P.s))
+qqp_m2 <- qqmath(m_fp_spill_a_3$full_model, id = 0.01, idLabels = as.character(drp_r_r2$P.s))
+grid.arrange(qqp_m1, qqp_m2, ncol = 2)
+```
+
+
+The effect of `Fit` remains not significant.
+
+```{r}
+nice(m_fp_spill_a_1)
+nice(m_fp_spill_a_3)
+```
+
+
+
+## With Accepts (log-transformed RTs and Accepts)
+
+```{r}
+m_fp_spill_al_1 <- mixed(log_spill ~ log_acc + (log_acc|P.s) + (Fit| Item), 
+                         drp_r, progress = FALSE)
+summary(m_fp_spill_al_1)
+```
+
+This model has correlations at the boundary of the parameter space. We refit the model without the correlations.
+
+```{r}
+m_fp_spill_al_2 <- mixed(log_spill ~ log_acc + (log_acc||P.s) + (Fit|| Item), 
+                         drp_r, progress = FALSE, expand_re = TRUE)
+summary(m_fp_spill_al_2)
+```
+The by-item random slope is zero hence we refit the model without it. 
+
+```{r}
+m_fp_spill_al_3 <- mixed(log_spill ~ log_acc + (log_acc||P.s) + (1| Item), 
+                         drp_r, progress = FALSE, expand_re = TRUE)
+summary(m_fp_spill_al_3)
+```
+
+Finally, because the correlation for the by-participant random effects was not 1 or -1 we finally add them again to the reduced model of the previous step.
+
+```{r}
+m_fp_spill_al_4 <- mixed(log_spill ~ log_acc + (log_acc|P.s) + (1| Item), 
+                         drp_r, progress = FALSE, expand_re = TRUE)
+summary(m_fp_spill_al_4)
+```
+
+Overall the best model appears to be the most reduced model.
+
+```{r}
+anova(m_fp_spill_al_1,m_fp_spill_al_2, m_fp_spill_al_3, m_fp_spill_al_4)
+```
+
+The QQ-plot of both models again shows massive departure from normality for the small RTs.
+
+```{r, fig.width=8, fig.height=4}
+qqp_m1 <- qqmath(m_fp_spill_al_1$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+qqp_m2 <- qqmath(m_fp_spill_al_3$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+grid.arrange(qqp_m1, qqp_m2, ncol = 2)
+```
+
+
+The effect of `log_acc` is not significant.
+
+```{r}
+nice(m_fp_spill_al_1)
+nice(m_fp_spill_al_3)
+```
+
+### With Accepts (log-transformed RTs)
+
+```{r}
+m_fp_spill_a_1 <- mixed(log_spill ~ acc_z + (acc_z|P.s) + (Fit| Item), drp_r, progress = FALSE)
+summary(m_fp_spill_a_1)
+```
+
+Again we observe one large correlation between the by-item random-effects parameters and we refit the model without this correlation.
+
+```{r}
+m_fp_spill_a_2 <- mixed(log_spill ~ acc_z + (acc_z|P.s) + (Fit||Item), drp_r, expand_re = TRUE, progress = FALSE)
+summary(m_fp_spill_a_2)
+```
+And the by-item random slope is now estimated at zero, we consequently refit the model without this parameters.
+
+```{r}
+m_fp_spill_a_3 <- mixed(log_spill ~ acc_z + (acc_z||P.s) + (1| Item), drp_r, expand_re = TRUE, progress = FALSE)
+summary(m_fp_spill_a_3)
+```
+
+This model seems reasonable and only provides a minimally worse account than the first model.
+
+```{r}
+anova(m_fp_spill_a_1, m_fp_spill_a_3)
+```
+
+The QQ-plot of both models again shows strong departarue from normality for small RTs.
+
+```{r, fig.width=8, fig.height=4}
+qqp_m1 <- qqmath(m_fp_spill_a_1$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+qqp_m2 <- qqmath(m_fp_spill_a_3$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+grid.arrange(qqp_m1, qqp_m2, ncol = 2)
+```
+
+
+The effect of `acc_z` is not significant.
+
+```{r}
+nice(m_fp_spill_a_1)
+nice(m_fp_spill_a_3)
+```
+
+## With Accept (Lambert-transformed RTs)
+
+Due to the large misfit, we again try the Lambert transformation on the reduced data set.
+
+```{r}
+m_fp_spill_lambert_a_1 <- mixed(spilloverw ~ acc_z + (acc_z|P.s) + (Fit| Item), drp_r_r2, progress = FALSE)
+summary(m_fp_spill_lambert_a_1)
+```
+
+Due to the large correlation between the by-item random-effects parameters we refit the model without the correlation.
+
+```{r}
+m_fp_spill_lambert_a_2 <- mixed(spilloverw ~ acc_z + (acc_z|P.s) + (Fit || Item), drp_r_r2, progress = FALSE, expand_re = TRUE)
+summary(m_fp_spill_lambert_a_2)
+```
+Now both random slopes are estimated to be virtually zero, we consequently refit the model without those parameters.
+
+```{r}
+m_fp_spill_lambert_a_3 <- mixed(spilloverw ~ acc_z + (acc_z|P.s) + (1| Item), drp_r_r2, progress = FALSE, expand_re = FALSE)
+summary(m_fp_spill_lambert_a_3)
+```
+
+Again the final model appears to be the optimal model.
+
+```{r}
+anova(m_fp_spill_lambert_a_1, m_fp_spill_lambert_a_2, m_fp_spill_lambert_a_3)
+```
+
+The QQ-plot now only shows comparatively mild violations at the edges. However, for the low RTs they still appear to large.
+
+```{r, fig.width=8, fig.height=4}
+qqp_m1 <- qqmath(m_fp_spill_lambert_a_1$full_model, id = 0.01, idLabels = as.character(drp_r_r2$P.s))
+qqp_m2 <- qqmath(m_fp_spill_lambert_a_3$full_model, id = 0.01, idLabels = as.character(drp_r_r2$P.s))
+grid.arrange(qqp_m1, qqp_m2, ncol = 2)
+```
+
+
+The effect of `Fit` remains not significant.
+
+```{r}
+nice(m_fp_spill_lambert_a_1)
+nice(m_fp_spill_lambert_a_3)
+```
+
+

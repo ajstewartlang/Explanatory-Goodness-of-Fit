@@ -1,3 +1,7 @@
+require (lme4)
+require (lmerTest)
+require (lsmeans)
+
 #use the RPs_plus_ratings data file
 
 #in the following analyses, we first look at how the eye-movement data (regression path times) are
@@ -24,6 +28,13 @@ index <- RPs_plus_ratings$Item != "9"
 model.with.interaction.no.slopes <- lmer (Consequent ~ Accepts * Confident + (1|P.s) + (1| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000)))
 model.without.interaction.no.slopes <- lmer (Consequent ~ Accepts + Confident + (1|P.s) + (1| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000)))
 anova (model.with.interaction.no.slopes, model.without.interaction.no.slopes)
+
+#log transformed
+model <- lmer (log(Consequent) ~ log(Accepts) + (1 + (log(Accepts))|P.s) + (1 +  Fit| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000)))
+summary (model)
+
+model1 <- lmer (log(Accepts) ~ log(Consequent) + (1 + (log(Consequent))|P.s) + (1 +  Fit| Item), data=RPs_plus_ratings[index,], control=lmerControl(optCtrl=list(maxfun=200000000)))
+summary (model1)
 
 #model with interaction doesn't improve fit (high correlation between predictors) so stick with 
 #model with just main effects

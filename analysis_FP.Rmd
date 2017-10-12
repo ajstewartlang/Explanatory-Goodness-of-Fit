@@ -18,7 +18,7 @@ require(afex)
 require(lattice) # for qqmath
 require(gridExtra)
 library(ggthemes)
-theme_set(theme_minimal())
+theme_set(theme_bw())
 
 ```
 

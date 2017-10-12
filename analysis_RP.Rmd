@@ -18,7 +18,7 @@ require(afex)
 require(lattice) # for qqmath
 require(gridExtra)
 library(ggthemes)
-theme_set(theme_minimal())
+theme_set(theme_light())
 
 ```
 
@@ -84,6 +84,22 @@ cor.test(~Confident+Accepts, agg1)
 ```
 
 Given the strong relationship between the two ratings we only consider the `Accepts` rating in the following to avoid multicolinearity. 
+
+```{r, eval=FALSE}
+p1_paper <- 
+  ggplot(agg1, aes(x=Fit, y=Accepts)) +
+  geom_violin(adjust = 1, draw_quantiles = c(0.5)) +
+  geom_line(aes(x=Fit2, y=Accepts, group = Item), alpha = 0.5) +
+  geom_point(aes(x=Fit2, y=Accepts)) +
+  stat_summary(fun.y = "mean", colour = "red", size = 2.5, geom = "point", shape = 17) +
+  labs(x = "Explanatory Fit", y = "Participant Ratings")
+
+pdf("fig_fit.pdf", width = 2, height = 2.75)
+p1_paper
+dev.off()
+
+```
+
 
 # Data Preparation
 

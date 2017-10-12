@@ -9,7 +9,7 @@ library(ggthemes)
 theme_set(theme_minimal())
 
 #First pass
-data_in <- FPs_plus_ratings
+data_in <- read.csv("FPs_plus_ratings.csv")
 data_in$P.s <- factor(data_in$P.s)
 data_in$Item <- factor(data_in$Item)
 drp_r <- droplevels(data_in[data_in$Item != "9" ,])
@@ -38,7 +38,7 @@ m_fp_spill <- mixed(log_spill ~ acc_z + (acc_z|P.s) + (Fit| Item), drp_r, progre
 summary(m_fp_spill)
 
 #Regression path
-data_in <- RPs_plus_ratings
+data_in <- read.csv("RPs_plus_ratings.csv")
 data_in$P.s <- factor(data_in$P.s)
 data_in$Item <- factor(data_in$Item)
 drp_r <- droplevels(data_in[data_in$Item != "9" ,])
@@ -67,7 +67,7 @@ m_rp_spill <- mixed(log_spill ~ acc_z + (acc_z|P.s) + (Fit| Item), drp_r, progre
 summary(m_rp_spill)
 
 #Total Time
-data_in <- TTs_plus_ratings
+data_in <- read.csv("TTs_plus_ratings.csv")
 data_in$P.s <- factor(data_in$P.s)
 data_in$Item <- factor(data_in$Item)
 drp_r <- droplevels(data_in[data_in$Item != "9" ,])
@@ -96,7 +96,7 @@ m_tt_spill <- mixed(log_spill ~ acc_z + (acc_z|P.s) + (Fit| Item), drp_r, progre
 summary(m_tt_spill)
 
 #Regressions Out
-data_in <- RO_plus_ratings
+data_in <- read.csv("RO_plus_ratings.csv")
 data_in$P.s <- factor(data_in$P.s)
 data_in$Item <- factor(data_in$Item)
 

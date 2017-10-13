@@ -2,7 +2,7 @@
 title: "Analysis of Regression Path Reading Times"
 author: "Henrik Singmann"
 output: 
-  html_notebook:
+  html_document:
     toc: yes
     toc_float: true
 date: "`r format(Sys.time(), '%d %B, %Y')`"

@@ -2,7 +2,7 @@
 title: "Analysis of First Pass Regressions Out "
 author: "Henrik Singmann"
 output: 
-  html_notebook:
+  html_document:
     toc: yes
     toc_float: true
 date: "`r format(Sys.time(), '%d %B, %Y')`"
@@ -17,7 +17,7 @@ require(ggplot2)
 require(afex)
 #require(lattice) # for qqmath
 require(gridExtra)
-theme_set(theme_minimal())
+theme_set(theme_light())
 require(optimx)
 require(DHARMa) # for residual analysis
 #require(binom)

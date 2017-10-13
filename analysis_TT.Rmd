@@ -2,7 +2,7 @@
 title: "Analysis of Total Reading Times"
 author: "Henrik Singmann"
 output: 
-  html_notebook:
+  html_document:
     toc: yes
     toc_float: true
 date: "`r format(Sys.time(), '%d %B, %Y')`"
@@ -18,7 +18,7 @@ require(afex)
 require(lattice) # for qqmath
 require(gridExtra)
 library(ggthemes)
-theme_set(theme_minimal())
+theme_set(theme_light())
 
 ```
 
@@ -229,33 +229,41 @@ m_fp_con_11 <- mixed(log_con ~ log_acc + (log_acc|P.s) + (Fit| Item), drp_r, pro
 summary(m_fp_con_11)
 ```
 
-As for the binary variable we see an extreme correlation between the random-effects parameters for the by-participant random effect.
+We see an extreme correlation between the random-effects parameters for the by-item random effect and a slightly smaller one but still potentially problematic for the by-participant random slope..
 
 
 ```{r}
-m_fp_con_12 <- mixed(log_con ~ log_acc + (log_acc||P.s) + (Fit|Item), drp_r, expand_re = TRUE, progress = FALSE)
+m_fp_con_12 <- mixed(log_con ~ log_acc + (log_acc||P.s) + (Fit||Item), drp_r, expand_re = TRUE, progress = FALSE)
 summary(m_fp_con_12)
 ```
 
-The reduced model seems to provide the better account.
+Now the variance component for the by-item random slope is estimated to be zero, likewise the by-participant random slope. Consequently we remove both of these terms.
 
 ```{r}
-anova(m_fp_con_11, m_fp_con_12)
+m_fp_con_13 <- mixed(log_con ~ log_acc + (0+log_acc|P.s) + (1|Item), drp_r, expand_re = FALSE, progress = FALSE)
+summary(m_fp_con_13)
 ```
 
-However, we again see some departure from normality.
+The reduced model seems to provide the best account.
+
+```{r}
+anova(m_fp_con_11, m_fp_con_12, m_fp_con_13)
+```
+
+However, we again see some departure from normality. Especially again for participant 10.
 
 ```{r, fig.width=8, fig.height=4}
 qqp_11 <- qqmath(m_fp_con_11$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
-qqp_12 <- qqmath(m_fp_con_12$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+qqp_12 <- qqmath(m_fp_con_13$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
 grid.arrange(qqp_11, qqp_12, ncol = 2)
 ```
 
-Again, neither model shows a significant effect of `log_acc`.
+The models that fit well show a significant effect of `log_acc`, the first model not so much.
 
 ```{r}
 nice(m_fp_con_11)
 nice(m_fp_con_12)
+nice(m_fp_con_13)
 ```
 
 ## With Accepts (log-transformed RTs)
@@ -268,15 +276,15 @@ summary(m_fp_con_21)
 We remove the correlations among the by-participant random effects.
 
 ```{r}
-m_fp_con_22 <- mixed(log_con ~ acc_z + (acc_z||P.s) + (Fit|Item), drp_r, expand_re = TRUE, progress = FALSE)
+m_fp_con_22 <- mixed(log_con ~ acc_z + (acc_z|P.s) + (Fit||Item), drp_r, expand_re = TRUE, progress = FALSE)
 summary(m_fp_con_22)
 ```
 
-We then also remove the by-participant random slopes.
+We then also remove the by-item random slopes.
 
 ```{r}
-m_fp_con_23 <- mixed(log_con ~ acc_z + (1|P.s) + (Fit|Item), drp_r, 
-                     expand_re = FALSE, progress = FALSE)
+m_fp_con_23 <- mixed(log_con ~ acc_z + (acc_z|P.s) + (1|Item), drp_r, 
+                     expand_re = TRUE, progress = FALSE)
 summary(m_fp_con_23)
 ```
 
@@ -292,10 +300,11 @@ qqp_22 <- qqmath(m_fp_con_23$full_model, id = 0.01, idLabels = as.character(drp_
 grid.arrange(qqp_21, qqp_22, ncol = 2)
 ```
 
-Furthermore, neither model shows a significant effect of `Accepts` (z-transformed to `acc_z`).
+Furthermore, the maximally reduced model shows a significant effect of `Accepts` (z-transformed to `acc_z`).
 
 ```{r}
 nice(m_fp_con_21)
+nice(m_fp_con_22)
 nice(m_fp_con_23)
 ```
 
@@ -307,16 +316,18 @@ m_con_ar_1 <- mixed(log_con ~ acc_z + (acc_z|P.s) + (Fit| Item),
 summary(m_con_ar_1)
 ```
 
-We remove the correlations among the random effects.
+We remove the correlations among the by-item random effects.
 
 ```{r}
-m_con_ar_2 <- mixed(log_con ~ acc_z + (acc_z||P.s) + (Fit | Item), 
+m_con_ar_2 <- mixed(log_con ~ acc_z + (acc_z|P.s) + (Fit || Item), 
                            drp_r_1, progress = FALSE, expand_re = TRUE)
 summary(m_con_ar_2)
 ```
 
+We now also remove the random slope estimatewd to be zero.
+
 ```{r}
-m_con_ar_3 <- mixed(log_con ~ acc_z + (1|P.s) + (Fit | Item), 
+m_con_ar_3 <- mixed(log_con ~ acc_z + (acc_z|P.s) + (1 | Item), 
                            drp_r_1, progress = FALSE, expand_re = FALSE)
 summary(m_con_ar_3)
 ```
@@ -325,7 +336,7 @@ summary(m_con_ar_3)
 anova(m_con_ar_1, m_con_ar_2, m_con_ar_3)
 ```
 
-Despite the correlation estimate of 1/-1, there seems to be some value in it. The QQ-plots show a only mild violations.
+The best model appears to be the maximally reduced model. In addition, the QQ-plots shows comparatively mild violations.
 
 ```{r, fig.width=8, fig.height=4}
 qqp_21 <- qqmath(m_con_ar_1$full_model, id = 0.01, idLabels = as.character(drp_r_1$P.s))
@@ -333,10 +344,11 @@ qqp_22 <- qqmath(m_con_ar_3$full_model, id = 0.01, idLabels = as.character(drp_r
 grid.arrange(qqp_21, qqp_22, ncol = 2)
 ```
 
-Furthermore, neither model shows a significant effect of `Accepts` (z-transformed to `acc_z`).
+Furthermore, now all models show a significant effect of `Accepts` (z-transformed to `acc_z`).
 
 ```{r}
 nice(m_con_ar_1)
+nice(m_con_ar_2)
 nice(m_con_ar_3)
 ```
 
@@ -461,18 +473,11 @@ m_fp_spill_al_3 <- mixed(log_spill ~ log_acc + (log_acc||P.s) + (1| Item),
 summary(m_fp_spill_al_3)
 ```
 
-Finally, because the correlation for the by-participant random effects was not 1 or -1 we finally add them again to the reduced model of the previous step.
-
-```{r}
-m_fp_spill_al_4 <- mixed(log_spill ~ log_acc + (log_acc|P.s) + (1| Item), 
-                         drp_r, progress = FALSE, expand_re = TRUE)
-summary(m_fp_spill_al_4)
-```
 
 Overall the best model appears to be the most reduced model 3.
 
 ```{r}
-anova(m_fp_spill_al_1,m_fp_spill_al_2, m_fp_spill_al_3, m_fp_spill_al_4)
+anova(m_fp_spill_al_1,m_fp_spill_al_2, m_fp_spill_al_3)
 ```
 
 The QQ-plot of both models again shows some departure from normality for small and large RTs.
@@ -498,7 +503,7 @@ m_fp_spill_a_1 <- mixed(log_spill ~ acc_z + (acc_z|P.s) + (Fit| Item), drp_r, pr
 summary(m_fp_spill_a_1)
 ```
 
-Again we observe one large correlation between the by-item random-effects parameters and we refit the model without this correlation. We also remove the other correlation as it is virtually zero.
+Again we observe large correlations between the by-participant and by-item random-effects parameters and we refit the model without these correlations.
 
 ```{r}
 m_fp_spill_a_2 <- mixed(log_spill ~ acc_z + (acc_z||P.s) + (Fit||Item), drp_r, expand_re = TRUE, progress = FALSE)
@@ -507,7 +512,7 @@ summary(m_fp_spill_a_2)
 And the by-item random slope is now estimated at zero, we consequently refit the model without this parameters.
 
 ```{r}
-m_fp_spill_a_3 <- mixed(log_spill ~ acc_z + (acc_z||P.s) + (1| Item), drp_r, expand_re = TRUE, progress = FALSE)
+m_fp_spill_a_3 <- mixed(log_spill ~ acc_z + (1|P.s) + (1| Item), drp_r, expand_re = TRUE, progress = FALSE)
 summary(m_fp_spill_a_3)
 ```
 
@@ -548,10 +553,10 @@ We again remove the correlations.
 m_fp_spill_lambert_a_2 <- mixed(log_spill ~ acc_z + (acc_z||P.s) + (Fit || Item), drp_r_r2, progress = FALSE, expand_re = TRUE)
 summary(m_fp_spill_lambert_a_2)
 ```
-Now the by-item random slope is estimated to be virtually zero, we consequently refit the model without this parameter.
+Now the random slopes are estimated to be virtually zero, we consequently refit the model without this parameter.
 
 ```{r}
-m_fp_spill_lambert_a_3 <- mixed(log_spill ~ acc_z + (acc_z||P.s) + (1| Item), drp_r_r2, progress = FALSE, expand_re = TRUE)
+m_fp_spill_lambert_a_3 <- mixed(log_spill ~ acc_z + (1|P.s) + (1| Item), drp_r_r2, progress = FALSE, expand_re = TRUE)
 summary(m_fp_spill_lambert_a_3)
 ```
 

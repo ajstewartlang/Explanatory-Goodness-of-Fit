@@ -137,7 +137,7 @@ sim_m_con_f_3 <- simulateResiduals(fittedModel = m_con_f_3$full_model, n = 250)
 plotSimulatedResiduals(sim_m_con_f_3)
 ```
 
-Interestingly, only for the optimal model but not for the maximal model is the effetc of Fit significant.
+For neither model is the effetc of Fit significant.
 
 ```{r}
 nice(m_con_f_1)
@@ -177,7 +177,7 @@ sim_m_con_a_3 <- simulateResiduals(fittedModel = m_con_a_3$full_model, n = 500)
 plotSimulatedResiduals(sim_m_con_a_3)
 ```
 
-Interestingly, neither model shows a significant effect of `Accepts` (z-transformed to `acc_z`). 
+Neither model shows a significant effect of `Accepts` (z-transformed to `acc_z`). 
 
 ```{r}
 nice(m_con_a_1)

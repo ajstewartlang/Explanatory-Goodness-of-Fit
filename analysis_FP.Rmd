@@ -250,14 +250,15 @@ summary(m_fp_con_11)
 
 As for the binary variable we see a extreme correlations between the random-effects parameters for both random-effects.
 
-
 ```{r}
 m_fp_con_12 <- mixed(log_con ~ log_acc + (log_acc||P.s) + (Fit||Item), drp_r, expand_re = TRUE, progress = FALSE)
 summary(m_fp_con_12)
 ```
 
+Because the by-item random slope is zero we remove it.
+
 ```{r}
-m_fp_con_13 <- mixed(log_con ~ log_acc + (0+log_acc|P.s) + (1|Item), drp_r, progress = FALSE)
+m_fp_con_13 <- mixed(log_con ~ log_acc + (log_acc||P.s) + (1|Item), drp_r, expand_re = TRUE, progress = FALSE)
 summary(m_fp_con_13)
 ```
 
@@ -265,7 +266,7 @@ summary(m_fp_con_13)
 anova(m_fp_con_11, m_fp_con_12, m_fp_con_13)
 ```
 
-The most reduced model seems to provide the best account. However, we again see strong deviations from normality for slow RTs.
+The most reduced model seems to provide the best account. However, we see strong deviations from normality for fast RTs.
 
 ```{r, fig.width=8, fig.height=4}
 qqp_11 <- qqmath(m_fp_con_11$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
@@ -293,6 +294,8 @@ We remove the correlations among the random effects.
 m_fp_con_22 <- mixed(log_con ~ acc_z + (acc_z||P.s) + (Fit||Item), drp_r, expand_re = TRUE, progress = FALSE)
 summary(m_fp_con_22)
 ```
+
+We remove the random slopes.
 
 ```{r}
 m_fp_con_23 <- mixed(log_con ~ acc_z + (1|P.s) + (1|Item), drp_r, expand_re = FALSE, progress = FALSE)
@@ -331,6 +334,8 @@ We remove the correlations among the random effects.
 m_con_lambert_a_2 <- mixed(consequentw ~ acc_z + (acc_z||P.s) + (Fit|| Item), drp_r_r1, progress = FALSE, expand_re = TRUE)
 summary(m_con_lambert_a_2)
 ```
+
+We remvoe the random slopes.
 
 ```{r}
 m_con_lambert_a_3 <- mixed(consequentw ~ acc_z + (1|P.s) + (1| Item), drp_r_r1, progress = FALSE)
@@ -470,26 +475,19 @@ m_fp_spill_al_2 <- mixed(log_spill ~ log_acc + (log_acc||P.s) + (Fit|| Item),
                          drp_r, progress = FALSE, expand_re = TRUE)
 summary(m_fp_spill_al_2)
 ```
-The by-item random slope is zero hence we refit the model without it. 
+The by-item and by-participant random slope is zero hence we refit the model without it. 
 
 ```{r}
-m_fp_spill_al_3 <- mixed(log_spill ~ log_acc + (log_acc||P.s) + (1| Item), 
-                         drp_r, progress = FALSE, expand_re = TRUE)
+m_fp_spill_al_3 <- mixed(log_spill ~ log_acc + (1|P.s) + (1| Item), 
+                         drp_r, progress = FALSE, expand_re = FALSE)
 summary(m_fp_spill_al_3)
 ```
 
-Finally, because the correlation for the by-participant random effects was not 1 or -1 we finally add them again to the reduced model of the previous step.
+
+Overall the best model appears to be the first model, notwithstanding its apparently defective nature.
 
 ```{r}
-m_fp_spill_al_4 <- mixed(log_spill ~ log_acc + (log_acc|P.s) + (1| Item), 
-                         drp_r, progress = FALSE, expand_re = TRUE)
-summary(m_fp_spill_al_4)
-```
-
-Overall the best model appears to be the most reduced model.
-
-```{r}
-anova(m_fp_spill_al_1,m_fp_spill_al_2, m_fp_spill_al_3, m_fp_spill_al_4)
+anova(m_fp_spill_al_1,m_fp_spill_al_2, m_fp_spill_al_3)
 ```
 
 The QQ-plot of both models again shows massive departure from normality for the small RTs.
@@ -515,23 +513,24 @@ m_fp_spill_a_1 <- mixed(log_spill ~ acc_z + (acc_z|P.s) + (Fit| Item), drp_r, pr
 summary(m_fp_spill_a_1)
 ```
 
-Again we observe one large correlation between the by-item random-effects parameters and we refit the model without this correlation.
+Again we observe large correlations among the random-effects parameters and we refit the model without these correlations.
 
 ```{r}
-m_fp_spill_a_2 <- mixed(log_spill ~ acc_z + (acc_z|P.s) + (Fit||Item), drp_r, expand_re = TRUE, progress = FALSE)
+m_fp_spill_a_2 <- mixed(log_spill ~ acc_z + (acc_z||P.s) + (Fit||Item), drp_r, expand_re = TRUE, progress = FALSE)
 summary(m_fp_spill_a_2)
 ```
-And the by-item random slope is now estimated at zero, we consequently refit the model without this parameters.
+
+The by-item random slope is now estimated at zero, we consequently refit the model without this parameters.
 
 ```{r}
 m_fp_spill_a_3 <- mixed(log_spill ~ acc_z + (acc_z||P.s) + (1| Item), drp_r, expand_re = TRUE, progress = FALSE)
 summary(m_fp_spill_a_3)
 ```
 
-This model seems reasonable and only provides a minimally worse account than the first model.
+Again, removing the correlation strangely leads to a considerable drop in fit. 
 
 ```{r}
-anova(m_fp_spill_a_1, m_fp_spill_a_3)
+anova(m_fp_spill_a_1, m_fp_spill_a_2, m_fp_spill_a_3)
 ```
 
 The QQ-plot of both models again shows strong departarue from normality for small RTs.
@@ -559,20 +558,20 @@ m_fp_spill_lambert_a_1 <- mixed(spilloverw ~ acc_z + (acc_z|P.s) + (Fit| Item), 
 summary(m_fp_spill_lambert_a_1)
 ```
 
-Due to the large correlation between the by-item random-effects parameters we refit the model without the correlation.
+Due to the large correlations between the random-effects parameters we refit the model without the correlations.
 
 ```{r}
-m_fp_spill_lambert_a_2 <- mixed(spilloverw ~ acc_z + (acc_z|P.s) + (Fit || Item), drp_r_r2, progress = FALSE, expand_re = TRUE)
+m_fp_spill_lambert_a_2 <- mixed(spilloverw ~ acc_z + (acc_z||P.s) + (Fit || Item), drp_r_r2, progress = FALSE, expand_re = TRUE)
 summary(m_fp_spill_lambert_a_2)
 ```
 Now both random slopes are estimated to be virtually zero, we consequently refit the model without those parameters.
 
 ```{r}
-m_fp_spill_lambert_a_3 <- mixed(spilloverw ~ acc_z + (acc_z|P.s) + (1| Item), drp_r_r2, progress = FALSE, expand_re = FALSE)
+m_fp_spill_lambert_a_3 <- mixed(spilloverw ~ acc_z + (1|P.s) + (1| Item), drp_r_r2, progress = FALSE, expand_re = FALSE)
 summary(m_fp_spill_lambert_a_3)
 ```
 
-Again the final model appears to be the optimal model.
+This time the final model appears to be the optimal model.
 
 ```{r}
 anova(m_fp_spill_lambert_a_1, m_fp_spill_lambert_a_2, m_fp_spill_lambert_a_3)

@@ -138,18 +138,18 @@ m_con_a_1 <- mixed(Consequent ~ acc_z + (acc_z|P.s) + (Fit| Item), drp_r, family
 summary(m_con_a_1)
 ```
 
-We see a suspcisouly high correlations between for both random effect grouping factors, consequently we remove those.
+We see a suspcisouly high correlations between the by-participant random effect parameters, consequently we remove it.
 
 
 ```{r}
-m_con_a_2 <- mixed(Consequent ~ acc_z + (acc_z||P.s) + (Fit|| Item), drp_r, family = binomial, method = "LRT", progress = FALSE, expand_re = TRUE, all_fit = TRUE)
+m_con_a_2 <- mixed(Consequent ~ acc_z + (acc_z||P.s) + (Fit|Item), drp_r, family = binomial, method = "LRT", progress = FALSE, expand_re = TRUE, all_fit = TRUE)
 summary(m_con_a_2)
 ```
 
 Given the small estimate of the by-participant random slope we remove it.
 
 ```{r}
-m_con_a_3 <- mixed(Consequent ~ acc_z + (1|P.s) + (Fit|| Item), drp_r, family = binomial, method = "LRT", progress = FALSE, expand_re = TRUE, all_fit = TRUE)
+m_con_a_3 <- mixed(Consequent ~ acc_z + (1|P.s) + (Fit|Item), drp_r, family = binomial, method = "LRT", progress = FALSE, expand_re = FALSE, all_fit = TRUE)
 summary(m_con_a_3)
 ```
 
@@ -164,32 +164,23 @@ sim_m_con_a_3 <- simulateResiduals(fittedModel = m_con_a_3$full_model, n = 500)
 plotSimulatedResiduals(sim_m_con_a_3)
 ```
 
-Interestingly, neither model shows a significant effect of `Accepts` (z-transformed to `acc_z`). 
+For the optimal model we find a significant effect of `Accepts` (z-transformed to `acc_z`). 
 
 ```{r}
 nice(m_con_a_1)
 nice(m_con_a_3)
 ```
 
-This contrasts somewhat with the results of the Wald tests reported above which clearly show a significant effect of `acc_z`. Consequently, we repeated the analysis using parametric bootstrap. This also showed no effect of `acc_z`.
-
-```{r}
-m_con_a_3_pb <- mixed(Consequent ~ acc_z + (1|P.s) + (Fit|| Item), drp_r, family = binomial, method = "PB", progress = FALSE, expand_re = TRUE, all_fit = TRUE)
-nice(m_con_a_3_pb)
-```
-
-If we plot the estimated effect we can see that it indeed is small.
+If we plot the estimated effect we can see that it is quite small.
 
 ```{r, fig.width=4, fig.height=3}
-plot(Effect("acc_z", m_con_a_3_pb$full_model, 
+plot(Effect("acc_z", m_con_a_3$full_model, 
             xlevels = list(acc_z = seq(-2.5, 2, by = 0.25))), 
      ylim = c(0,1), type = "response")
 ```
 
 
-
 # Spillover
-
 
 
 ```{r, fig.width=6, fig.height=4}
@@ -252,16 +243,16 @@ m_spill_a_1 <- mixed(spillover ~ acc_z + (acc_z|P.s) + (Fit| Item), drp_r, famil
 summary(m_spill_a_1)
 ```
 
-Again we observe large correlations between the by-participants and by-item random-effects parameters and we refit the model without the correlations.
+We observe large correlations between the by-item random-effects parameters and we refit the model without the correlation.
 
 ```{r}
-m_spill_a_2 <- mixed(spillover ~ acc_z + (acc_z||P.s) + (Fit|| Item), drp_r, family = binomial, method = "LRT", progress = FALSE, expand_re = TRUE)
+m_spill_a_2 <- mixed(spillover ~ acc_z + (acc_z|P.s) + (Fit|| Item), drp_r, family = binomial, method = "LRT", progress = FALSE, expand_re = TRUE)
 summary(m_spill_a_2)
 ```
-Aa one random slopes is estimated to be zero, we consequently refit the model without this parameter.
+As one random slopes is estimated to be zero, we consequently refit the model without this parameter.
 
 ```{r}
-m_spill_a_3 <- mixed(spillover ~ acc_z + (1|P.s) + (Fit|| Item), drp_r, family = binomial, method = "LRT", progress = FALSE, expand_re = TRUE)
+m_spill_a_3 <- mixed(spillover ~ acc_z + (acc_z|P.s) + (1| Item), drp_r, family = binomial, method = "LRT", progress = FALSE, expand_re = TRUE)
 summary(m_spill_a_3)
 ```
 
@@ -279,7 +270,7 @@ plotSimulatedResiduals(sim_m_spill_a_3)
 ```
 
 
-The effect of `acc_z` is not significant in either model.
+The effect of `acc_z` is significant in both models.
 
 ```{r}
 nice(m_spill_a_1)

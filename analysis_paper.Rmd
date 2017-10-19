@@ -1,0 +1,353 @@
+---
+title: "Analysis of Regression Path Reading Times"
+author: "Henrik Singmann"
+output: 
+  html_document:
+    toc: yes
+    toc_float: true
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+---
+
+
+```{r setup, results='hide', message=FALSE}
+require(dplyr)
+require(tidyr)
+require(stringr)
+require(ggplot2)
+require(afex)
+require(lattice) # for qqmath
+require(gridExtra)
+library(ggthemes)
+theme_set(theme_light())
+
+```
+
+the explanatory goodness of fit would affect the Regression Path (RP) times. However, there were two different variables representing the explanatory goodness of fit: the experimenter assigned binary variable `Fit` with levels 'high' and 'low' and the continuous variable `Accepts` representing how a different group of participants judged the explanatory fit. In addition, we also have a confidence rating for the continuous fit rating, variable `Confident`.
+We first compare how these two continuous variables are related to `Fit` (note that fit is identical for all DVs, hence we simply use the first DV).
+
+# Rating Data
+
+The goal of the following analysis was to see how various eye tracking measures were affected by the acceptability ratings (= `Accepts`) from a different group of participants.   
+
+```{r, fig.width=8, fig.height=7}
+RPs_plus_ratings <- read.csv("RPs_plus_ratings.csv")
+RPs_plus_ratings$P.s <- factor(RPs_plus_ratings$P.s)
+RPs_plus_ratings$Item <- factor(RPs_plus_ratings$Item)
+
+agg1 <- RPs_plus_ratings %>% 
+  group_by(Item, Fit) %>% 
+  summarise(Accepts = first(Accepts),
+            Confident = first(Confident))
+agg2 <- RPs_plus_ratings %>% 
+  group_by(Item, Fit) %>% 
+  summarise(Accepts = mean(Accepts),
+            Confident = mean(Confident))
+
+stopifnot(all.equal(agg1, agg2)) # to make sure nothing fishy is going on.
+agg1$Fit2 <- jitter(as.numeric(agg1$Fit))
+
+```
+
+As can be seen in the following plot, the continuous acceptability rating is in line with the experimenter induced Fit rating. 
+
+
+```{r, eval=TRUE, fig.width=2, fig.height=2.75}
+p1_paper <- 
+  ggplot(agg1, aes(x=Fit, y=Accepts)) +
+  geom_violin(adjust = 1, draw_quantiles = c(0.5)) +
+  geom_line(aes(x=Fit2, y=Accepts, group = Item), alpha = 0.5) +
+  geom_point(aes(x=Fit2, y=Accepts)) +
+  stat_summary(fun.y = "mean", colour = "red", size = 2.5, geom = "point", shape = 17) +
+  labs(x = "Explanatory Fit", y = "Participant Ratings")
+
+pdf("fig_fit.pdf", width = 2, height = 2.75)
+p1_paper
+dev.off()
+
+p1_paper
+
+```
+
+We also do not find a single case for which participants mean scores do not agree with the intended ones:
+
+```{r}
+agg1a <- agg1 %>% 
+  select(-Confident, -Fit2) %>% 
+  spread(Fit, Accepts)
+any(agg1a$High < agg1a$Low)
+```
+
+Confidence ratings are highly correlated with the acceptability scores.
+
+```{r}
+cor.test(~Confident+Accepts, agg1)
+```
+
+Given the strong relationship between the two ratings we only consider the `Accepts` rating in the following to avoid multicolinearity. 
+
+# Introduction Eye-Tracking Data
+
+We analysed four processing measures:
+
+- First pass reading time is the sum of all the fixation durations in seconds from the eye first entering the region until first exiting either to the left or right. 
+- First pass regressions out is the percentage of trials in which regressive saccades were made from the current most rightward fixation into an earlier region. 
+- Regression path reading time is the sum of all fixation durations in seconds from the eye first entering a region until first exiting the region to the right (including all re-reading of previously read text). 
+- Total reading time is the sum of all fixation durations in a region in seconds. 
+
+The first two measures provide information about processing as a region of text is first encountered, the third information about both early and intermediate processing, and the fourth information about early, intermediate, and later processes. 
+
+
+
+# Regression Path Reading Time
+
+## Data Preparation
+
+```{r}
+drp_r <- droplevels(RPs_plus_ratings[RPs_plus_ratings$Item != "9" ,])
+nas <- is.na(drp_r$spillover) | is.na(drp_r$Consequent)
+drp_r <- droplevels(drp_r[!nas,])
+
+```
+
+For the analysis we remove `r sum(nas)` trials with missing data in either spillover or Consequent. Then we transform all RTs from ms to s and calculate transformed versions using `log`. 
+
+```{r}
+drp_r <- drp_r %>%
+  mutate(
+    consequent = Consequent/1000,
+    log_con = log(consequent),
+    spillover = spillover/1000,
+    log_spill = log(spillover)
+  )
+
+```
+
+We then plot the different versions of the DVs. 
+
+```{r}
+dplot <- drp_r %>% 
+  gather("key", "value",consequent, log_con, spillover, log_spill) %>% 
+  mutate(region = if_else(str_detect(key, "spill"), "spillover", "consequent"), 
+         type = if_else(str_detect(key, "^log"), "log", 
+                        if_else(str_detect(key, "^inv"), "inverse", "original")))
+
+ggplot(data = dplot) +
+  geom_histogram(mapping = aes(x = value), bins = 100) + 
+  facet_grid(region ~ type)
+```
+
+As can be seen, the log transformation helps quite a bit in achieving approximate normality. Especially the `spillover` variable otherwise exhibits clearly a number of extreme values such as RTs above 5 seconds (consequent = `r round(mean(drp_r$consequent > 5), 2)`, spillover = `r round(mean(drp_r$spillover > 5), 2)`), above 3 seconds (consequent = `r round(mean(drp_r$consequent > 3), 2)`, spillover = `r round(mean(drp_r$spillover > 3), 2)`) or above 2.5 seconds (consequent = `r round(mean(drp_r$consequent > 2.5), 2)`, spillover = `r round(mean(drp_r$spillover > 2.5), 2)`).
+
+## Consequent
+
+Note that the maximal models for the continuous independent variable `Accepts` have by-participant random slopes for `Accepts`, but by-item random slopes for `Fit` (which is the binary experimenter defined fit variable). The reason for this is that `Accepts` has only two different values for each `Item`, thus the binary `Fit` (i.e., a factor) variable seems more reasonable then a continuous variable with two values.
+
+We use log-transofmred RTs as DV, and non-transformed acceptability measures as IV.
+
+```{r}
+m_fp_con_21 <- mixed(log_con ~ Accepts + (Accepts|P.s) + (Fit| Item), drp_r, progress = FALSE)
+summary(m_fp_con_21)
+```
+
+We see a suspcisouly high correlation between the by-item random-effects parameters, consequently we remove those.
+
+
+```{r}
+m_fp_con_22 <- mixed(log_con ~ Accepts + (Accepts|P.s) + (Fit||Item), drp_r, expand_re = TRUE, progress = FALSE)
+summary(m_fp_con_22)
+```
+
+```{r}
+anova(m_fp_con_21, m_fp_con_22)
+```
+
+The difference in goodness of fit is rather small.  We therefore inspect the QQ-plots of both models. As they both look identical we prefer the model with correlations due to the slightly better fit. However, we still see some outliers for long RTs.
+
+```{r, fig.width=8, fig.height=4}
+qqp_21 <- qqmath(m_fp_con_21$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+qqp_22 <- qqmath(m_fp_con_22$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+grid.arrange(qqp_21, qqp_22, ncol = 2)
+```
+
+In any case, both models show a significant effect of `Accepts` (z-transformed to `acc_z`).
+
+```{r}
+nice(m_fp_con_21)
+nice(m_fp_con_22)
+```
+
+### Removed RTs
+
+To make sure the long RTs do not have an unreasonable influence on the results we refit the optimal model after removing the RTs that are clear outliers in the qq-plots:
+
+```{r}
+
+outlier_ids <- c(12, 10, 11, 21, 17)
+n_outliers <-  c(1,  1,  2,  1,  1)
+outlier_rows <- unlist(lapply(seq_along(outlier_ids), function(x) {
+  tmp <- drp_r[ drp_r$P.s == outlier_ids[x], "log_con", drop=FALSE ]
+  as.numeric(rownames(tmp)[order(tmp, decreasing = TRUE)[seq_len(n_outliers[x])]])
+  }))
+
+drp_r2 <- drp_r[-outlier_rows,]
+```
+
+
+```{r}
+m_fp_con_22_r <- mixed(log_con ~ Accepts + (Accepts|P.s) + (Fit||Item), drp_r2, expand_re = TRUE, progress = FALSE)
+summary(m_fp_con_22_r)
+```
+
+The resulting qq-plots look a lot less problematic:
+
+```{r, fig.width=4, fig.height=4}
+qqp_22 <- qqmath(m_fp_con_22_r$full_model, id = 0.01, idLabels = as.character(drp_r2$P.s))
+qqp_22
+```
+
+In addition, we still find the effects of Acceptability.
+
+```{r}
+nice(m_fp_con_22_r)
+```
+
+
+### Sanity Checks
+
+To make sure our decision to use the logged RTs was justified we also fit the maximal model with the untransformed DVs.
+
+```{r}
+m_fp_con_91 <- mixed(consequent ~ Accepts + (Accepts|P.s) + (Fit| Item), drp_r, progress = FALSE)
+```
+
+```{r, fig.width=4, fig.height=4}
+qqp_91 <- qqmath(m_fp_con_91$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+qqp_91
+```
+
+From the QQ-plot it is obvious that the impact of the outliers is a lot more dramatic for the untransformed RTs than for the models with logged RTs. Consequently, the logged RTs seems to be the most reasonable DV.
+
+### Summary
+
+
+```{r, fig.width=8, fig.height=4, eval=FALSE}
+drd_a2 <- drp_r %>% 
+  group_by(P.s, Fit) %>% 
+  summarise(log_con = mean(log_con))
+
+drp_r$Fit2 <- jitter(as.numeric(drp_r$Fit))
+drd_a2$Fit2 <- jitter(as.numeric(drd_a2$Fit))
+
+coef_mfp_11 <- coef(m_fp_con_11$full_model)
+coef_mfp_22 <- coef(m_fp_con_22$full_model)
+coef_mfp_22 <- data.frame(intercept = coef_mfp_22$P.s$`(Intercept)`,
+                          slope = coef_mfp_22$P.s$acc_z + coef_mfp_22$P.s$re1.acc_z)
+
+pres_rp_a <- ggplot(data = drp_r, mapping = aes(x = Fit, y = log_con)) +
+  geom_boxplot(outlier.color =  NA) +
+  geom_line(data = drd_a2, aes(x=Fit2, y=log_con, group = P.s), alpha = 0.5) +
+  geom_point(data = drd_a2, aes(x=Fit2, y=log_con, group = P.s), alpha = 0.5) +
+  stat_summary(fun.y = "mean", colour = "red", size = 2, geom = "point")
+
+pres_rp_b <- ggplot(data = drp_r, mapping = aes(x = log_acc, y = log_con)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(intercept = coef_mfp_11$P.s$`(Intercept)`, slope = coef_mfp_11$P.s$log_acc, alpha = 0.5)
+pres_rp_c <- ggplot(data = drp_r, mapping = aes(x = acc_z, y = log_con)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(intercept = coef_mfp_22$intercept, slope = coef_mfp_22$slope, alpha = 0.5)
+
+grid.arrange(pres_rp_a, pres_rp_b, pres_rp_c, ncol = 3)
+```
+
+## Spillover
+
+
+```{r}
+m_fp_spill_a_1 <- mixed(log_spill ~ Accepts + (Accepts|P.s) + (Fit| Item), drp_r, progress = FALSE)
+summary(m_fp_spill_a_1)
+```
+
+Again we observe correlations at the boundary between the by-participants and by-item random-effects parameters and we refit the model without the correlations.
+
+```{r}
+m_fp_spill_a_2 <- mixed(log_spill ~ Accepts + (Accepts||P.s) + (Fit||Item), drp_r, expand_re = TRUE, progress = FALSE)
+summary(m_fp_spill_a_2)
+```
+And both random slopes are estimated to be zero, we consequently refit the model without those parameters.
+
+```{r}
+m_fp_spill_a_3 <- mixed(log_spill ~ Accepts + (1|P.s) + (1| Item), drp_r, progress = FALSE)
+summary(m_fp_spill_a_3)
+```
+
+This model seems reasonable and only provides a minimally worse account than the first model.
+
+```{r}
+anova(m_fp_spill_a_1, m_fp_spill_a_3)
+```
+
+The QQ-plot of both models is essentially identical. Again we see some problems for data from participant 10.
+
+```{r, fig.width=8, fig.height=4}
+qqp_m1 <- qqmath(m_fp_spill_a_1$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+qqp_m2 <- qqmath(m_fp_spill_a_3$full_model, id = 0.01, idLabels = as.character(drp_r$P.s))
+grid.arrange(qqp_m1, qqp_m2, ncol = 2)
+```
+
+
+The effect of `acc_z` now is almost significant for the maximal model (which appears to be overparameterized) and significant for the random-intercepts only model.
+
+```{r}
+nice(m_fp_spill_a_1)
+nice(m_fp_spill_a_3)
+```
+
+### Models Without Participant 10
+
+Finally we also remove the problematic participant 10 and refit the optimal models.
+
+```{r}
+drp_r2 <- droplevels(drp_r[!(drp_r$P.s %in% c("10")),])
+m_fp_spill_a_3b <- mixed(log_spill ~ Accepts + (1|P.s) + (1| Item), drp_r2, progress = FALSE)
+nice(m_fp_spill_a_3b)
+```
+
+```{r, fig.width=4, fig.height=4}
+qqp_m3 <- qqmath(m_fp_spill_a_3b$full_model, id = 0.01, idLabels = as.character(drp_r2$P.s))
+qqp_m3
+```
+
+This analysis shows that the effect of Acceptability is clearly significant is for the two model variants (with logged or untransformed `Accepts` as IV). In addition, the QQ-plots look even less problematic.
+
+### Summary
+
+
+```{r, fig.width=8, fig.height=4, eval=FALSE}
+drd_a2 <- drp_r %>% 
+  group_by(P.s, Fit) %>% 
+  summarise(log_spill = mean(log_spill))
+
+drp_r$Fit2 <- jitter(as.numeric(drp_r$Fit))
+drd_a2$Fit2 <- jitter(as.numeric(drd_a2$Fit))
+
+coef_mfp_11 <- coef(m_fp_spill_al_3$full_model)
+coef_mfp_11<- data.frame(intercept = coef_mfp_11$P.s$`(Intercept)`,
+                          slope = coef_mfp_11$P.s$log_acc + coef_mfp_11$P.s$re1.log_acc)
+coef_mfp_22 <- coef(m_fp_spill_a_3$full_model)
+
+pres_rp_a <- ggplot(data = drp_r, mapping = aes(x = Fit, y = log_spill)) +
+  geom_boxplot(outlier.color =  NA) +
+  geom_line(data = drd_a2, aes(x=Fit2, y=log_spill, group = P.s), alpha = 0.5) +
+  geom_point(data = drd_a2, aes(x=Fit2, y=log_spill, group = P.s), alpha = 0.5) +
+  stat_summary(fun.y = "mean", colour = "red", size = 2, geom = "point")
+
+pres_rp_b <- ggplot(data = drp_r, mapping = aes(x = log_acc, y = log_spill)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(intercept = coef_mfp_11$intercept, slope = coef_mfp_11$slope, alpha = 0.5)
+
+pres_rp_c <- ggplot(data = drp_r, mapping = aes(x = acc_z, y = log_spill)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(intercept = coef_mfp_22$P.s$`(Intercept)`, slope = coef_mfp_22$P.s$acc_z, alpha = 0.5) 
+
+grid.arrange(pres_rp_a, pres_rp_b, pres_rp_c, ncol = 3)
+```

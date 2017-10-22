@@ -57,7 +57,7 @@ p1_paper <-
   geom_line(aes(x=Fit2, y=Accepts, group = Item), alpha = 0.5) +
   geom_point(aes(x=Fit2, y=Accepts)) +
   stat_summary(fun.y = "mean", colour = "red", size = 2.5, geom = "point", shape = 17) +
-  labs(x = "Explanatory Fit", y = "Participant Ratings")
+  labs(x = "Explanatory Fit", y = "Acceptability Ratings")
 
 pdf("fig_fit.pdf", width = 2, height = 2.75)
 p1_paper
@@ -950,6 +950,8 @@ xvar <- seq(1, 7, by = 0.1)
 alpha_1 <- 0.25
 alpha_2 <- 0.05
 
+xlab_text <- "Acceptability Ratings"
+
 tt <- Effect("Accepts", optimal_con_fp$full_model, xlevels = list(Accepts = xvar))
 tmp_df <- data.frame(x = tt$variables$Accepts$levels, min = tt$lower, max = tt$upper, fit = tt$fit)
 pfp_con <- ggplot() +
@@ -957,7 +959,7 @@ pfp_con <- ggplot() +
   geom_point(data = drp_fp, mapping = aes(x = Accepts, y = log_con), alpha = alpha_1) +
   geom_line(data = tmp_df, mapping = aes(x = x, y = fit)) +
   coord_cartesian(xlim = c(2.5, 6.2), ylim = min_con, expand = FALSE) +
-  xlab("Acceptance Ratings") + ylab("log(RT) in seconds") +
+  xlab(xlab_text) + ylab("log(RT) in seconds") +
   ggtitle("FP Reading Time: Consequent")
   
 
@@ -969,7 +971,7 @@ pfp_spill <-
   geom_point(data = drp_fp, mapping = aes(x = Accepts, y = log_spill), alpha = alpha_1) +
   geom_line(data = tmp_df, mapping = aes(x = x, y = fit)) +
   coord_cartesian(xlim = c(2.5, 6.2), ylim = min_spill, expand = FALSE) +
-  xlab("Acceptance Ratings") + ylab("log(RT) in seconds") +
+  xlab(xlab_text) + ylab("log(RT) in seconds") +
   ggtitle("FP Reading Time: Spillover")
 
 tt <- Effect("Accepts", optimal_con_ro$full_model, xlevels = list(Accepts = xvar))
@@ -981,8 +983,8 @@ pro_con <- ggplot() +
   geom_point(data = drp_ro, aes(x = Accepts, y = Consequent), alpha = alpha_2) +
   geom_line(data = tmp_df, mapping = aes(x = x, y = binomial()$linkinv(fit))) +
   coord_cartesian(xlim = c(2.5, 6.2), ylim = ylim_bin, expand = FALSE) +
-  xlab("Acceptance Ratings") + ylab("P(Regression Out)") +
-  ggtitle("FP Regression Out: Consequent")
+  xlab(xlab_text) + ylab("P(Regressions Out)") +
+  ggtitle("FP Regressions Out: Consequent")
 
 tt <- Effect("Accepts", optimal_spill_ro$full_model, xlevels = list(Accepts = xvar))
 tmp_df <- data.frame(x = tt$variables$Accepts$levels, min = tt$lower, max = tt$upper, fit = tt$fit)
@@ -994,8 +996,8 @@ pro_spill <-
   geom_point(data = drp_ro, aes(x = Accepts, y = spillover), alpha = alpha_2) +
   geom_line(data = tmp_df, mapping = aes(x = x, y = binomial()$linkinv(fit))) +
   coord_cartesian(xlim = c(2.5, 6.2), ylim = ylim_bin, expand = FALSE) +
-  xlab("Acceptance Ratings") + ylab("P(Regression Out)") +
-  ggtitle("FP Regression Out: Spillover")
+  xlab(xlab_text) + ylab("P(Regressions Out)") +
+  ggtitle("FP Regressions Out: Spillover")
 
 
 tt <- Effect("Accepts", optimal_con_rp$full_model, xlevels = list(Accepts = xvar))
@@ -1005,8 +1007,8 @@ prp_con <- ggplot() +
   geom_point(data = drp_rp, mapping = aes(x = Accepts, y = log_con), alpha = alpha_1) +
   geom_line(data = tmp_df, mapping = aes(x = x, y = fit)) +
   coord_cartesian(xlim = c(2.5, 6.2), ylim = min_con, expand = FALSE) +
-  xlab("Acceptance Ratings") + ylab("log(RT) in seconds") +
-  ggtitle("RP Reading Times: Consequent")
+  xlab(xlab_text) + ylab("log(RT) in seconds") +
+  ggtitle("RP Reading Time: Consequent")
   
 
 tt <- Effect("Accepts", optimal_spill_rp$full_model, xlevels = list(Accepts = xvar))
@@ -1017,8 +1019,8 @@ prp_spill <-
   geom_point(data = drp_rp, mapping = aes(x = Accepts, y = log_spill), alpha = alpha_1) +
   geom_line(data = tmp_df, mapping = aes(x = x, y = fit)) +
   coord_cartesian(xlim = c(2.5, 6.2), ylim = min_spill, expand = FALSE) +
-  xlab("Acceptance Ratings") + ylab("log(RT) in seconds") +
-  ggtitle("RP Reading Times: Spillover")
+  xlab(xlab_text) + ylab("log(RT) in seconds") +
+  ggtitle("RP Reading Time: Spillover")
 
 
 tt <- Effect("Accepts", optimal_con_tt$full_model, xlevels = list(Accepts = xvar))
@@ -1028,8 +1030,8 @@ ptt_con <- ggplot() +
   geom_point(data = drp_tt, mapping = aes(x = Accepts, y = log_con), alpha = alpha_1) +
   geom_line(data = tmp_df, mapping = aes(x = x, y = fit)) +
   coord_cartesian(xlim = c(2.5, 6.2), ylim = min_con, expand = FALSE) +
-  xlab("Acceptance Ratings") + ylab("log(RT) in seconds") +
-  ggtitle("Total Reading Times: Consequent")
+  xlab(xlab_text) + ylab("log(RT) in seconds") +
+  ggtitle("Total Reading Time: Consequent")
   
 
 tt <- Effect("Accepts", optimal_spill_tt$full_model, xlevels = list(Accepts = xvar))
@@ -1040,15 +1042,15 @@ ptt_spill <-
   geom_point(data = drp_tt, mapping = aes(x = Accepts, y = log_spill), alpha = alpha_1) +
   geom_line(data = tmp_df, mapping = aes(x = x, y = fit)) +
   coord_cartesian(xlim = c(2.5, 6.2), ylim = min_spill, expand = FALSE) +
-  xlab("Acceptance Ratings") + ylab("log(RT) in seconds") +
-  ggtitle("Total Reading Times: Spillover")
+  xlab(xlab_text) + ylab("log(RT) in seconds") +
+  ggtitle("Total Reading Time: Spillover")
 
 
 grid.arrange(pfp_con, pfp_spill, pro_con, pro_spill, prp_con, prp_spill, ptt_con, ptt_spill,  ncol = 4, as.table = FALSE)
 ```
 
 ```{r, echo=FALSE, results='hide'}
-pdf("figure2.pdf", width = 13, height = 6)
+pdf("figure2.pdf", width = 13.5, height = 6)
 
 grid.arrange(pfp_con, pfp_spill, pro_con, pro_spill, prp_con, prp_spill, ptt_con, ptt_spill,  ncol = 4, as.table = FALSE)
 dev.off()

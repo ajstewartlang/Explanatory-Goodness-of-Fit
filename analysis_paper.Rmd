@@ -942,8 +942,8 @@ knitr::kable(nice(optimal_spill_tt), caption = "Total Reading Times: Spillover")
 
 ```{r, fig.width=8, fig.height=4, eval=TRUE}
 
-min_con <- c(-2.25, 2.25)
-min_spill <- c(-2.1, 2.95)
+min_con <- c(-2.25, 2.3)
+min_spill <- c(-2.1, 3.3)
 ylim_bin <- c(-0.05,1.05)
 xvar <- seq(1, 7, by = 0.1)
 
@@ -954,13 +954,28 @@ xlab_text <- "Acceptability Ratings"
 
 tt <- Effect("Accepts", optimal_con_fp$full_model, xlevels = list(Accepts = xvar))
 tmp_df <- data.frame(x = tt$variables$Accepts$levels, min = tt$lower, max = tt$upper, fit = tt$fit)
+size_anno <- 4
+
+make_beta_string <- function(model) {
+  #browser()
+  df <- summary(lstrends(model, specs = ~1, var = "Accepts"))
+  paste0("beta", "== '", 
+  formatC(df$Accepts.trend[1], digits = 2, format = "f"), " [",
+  formatC(df[1,5], digits = 2, format = "f"), ", ",
+  formatC(df[1,6], digits = 2, format = "f"), "]'"
+  )
+}
+lsm.options(lmer.df = "Kenward-Roger")
+
 pfp_con <- ggplot() +
   geom_ribbon(data = tmp_df, aes(x = x, ymin = min, ymax = max), fill = "grey70") +
   geom_point(data = drp_fp, mapping = aes(x = Accepts, y = log_con), alpha = alpha_1) +
   geom_line(data = tmp_df, mapping = aes(x = x, y = fit)) +
   coord_cartesian(xlim = c(2.5, 6.2), ylim = min_con, expand = FALSE) +
   xlab(xlab_text) + ylab("log(RT) in seconds") +
-  ggtitle("FP Reading Time: Consequent")
+  ggtitle("FP Reading Time: Consequent") +
+  annotate("text", x = 5, y = 2, 
+           label = make_beta_string(optimal_con_fp), parse = TRUE, size = size_anno)
   
 
 tt <- Effect("Accepts", optimal_spill_fp$full_model, xlevels = list(Accepts = xvar))
@@ -972,7 +987,9 @@ pfp_spill <-
   geom_line(data = tmp_df, mapping = aes(x = x, y = fit)) +
   coord_cartesian(xlim = c(2.5, 6.2), ylim = min_spill, expand = FALSE) +
   xlab(xlab_text) + ylab("log(RT) in seconds") +
-  ggtitle("FP Reading Time: Spillover")
+  ggtitle("FP Reading Time: Spillover") +
+  annotate("text", x = 5, y = 3, 
+           label = make_beta_string(optimal_spill_fp), parse = TRUE, size = size_anno)
 
 tt <- Effect("Accepts", optimal_con_ro$full_model, xlevels = list(Accepts = xvar))
 tmp_df <- data.frame(x = tt$variables$Accepts$levels, min = tt$lower, max = tt$upper, fit = tt$fit)
@@ -984,7 +1001,9 @@ pro_con <- ggplot() +
   geom_line(data = tmp_df, mapping = aes(x = x, y = binomial()$linkinv(fit))) +
   coord_cartesian(xlim = c(2.5, 6.2), ylim = ylim_bin, expand = FALSE) +
   xlab(xlab_text) + ylab("P(Regressions Out)") +
-  ggtitle("FP Regressions Out: Consequent")
+  ggtitle("FP Regressions Out: Consequent") +
+  annotate("text", x = 5, y = 0.85, 
+           label = make_beta_string(optimal_con_ro), parse = TRUE, size = size_anno)
 
 tt <- Effect("Accepts", optimal_spill_ro$full_model, xlevels = list(Accepts = xvar))
 tmp_df <- data.frame(x = tt$variables$Accepts$levels, min = tt$lower, max = tt$upper, fit = tt$fit)
@@ -997,7 +1016,9 @@ pro_spill <-
   geom_line(data = tmp_df, mapping = aes(x = x, y = binomial()$linkinv(fit))) +
   coord_cartesian(xlim = c(2.5, 6.2), ylim = ylim_bin, expand = FALSE) +
   xlab(xlab_text) + ylab("P(Regressions Out)") +
-  ggtitle("FP Regressions Out: Spillover")
+  ggtitle("FP Regressions Out: Spillover") +
+  annotate("text", x = 5, y = 0.85, 
+           label = make_beta_string(optimal_spill_ro), parse = TRUE, size = size_anno)
 
 
 tt <- Effect("Accepts", optimal_con_rp$full_model, xlevels = list(Accepts = xvar))
@@ -1008,7 +1029,9 @@ prp_con <- ggplot() +
   geom_line(data = tmp_df, mapping = aes(x = x, y = fit)) +
   coord_cartesian(xlim = c(2.5, 6.2), ylim = min_con, expand = FALSE) +
   xlab(xlab_text) + ylab("log(RT) in seconds") +
-  ggtitle("RP Reading Time: Consequent")
+  ggtitle("RP Reading Time: Consequent") +
+  annotate("text", x = 5, y = 2, 
+           label = make_beta_string(optimal_con_rp), parse = TRUE, size = size_anno)
   
 
 tt <- Effect("Accepts", optimal_spill_rp$full_model, xlevels = list(Accepts = xvar))
@@ -1020,7 +1043,9 @@ prp_spill <-
   geom_line(data = tmp_df, mapping = aes(x = x, y = fit)) +
   coord_cartesian(xlim = c(2.5, 6.2), ylim = min_spill, expand = FALSE) +
   xlab(xlab_text) + ylab("log(RT) in seconds") +
-  ggtitle("RP Reading Time: Spillover")
+  ggtitle("RP Reading Time: Spillover") +
+  annotate("text", x = 5, y = 3, 
+           label = make_beta_string(optimal_spill_rp), parse = TRUE, size = size_anno)
 
 
 tt <- Effect("Accepts", optimal_con_tt$full_model, xlevels = list(Accepts = xvar))
@@ -1031,7 +1056,9 @@ ptt_con <- ggplot() +
   geom_line(data = tmp_df, mapping = aes(x = x, y = fit)) +
   coord_cartesian(xlim = c(2.5, 6.2), ylim = min_con, expand = FALSE) +
   xlab(xlab_text) + ylab("log(RT) in seconds") +
-  ggtitle("Total Reading Time: Consequent")
+  ggtitle("Total Reading Time: Consequent") +
+  annotate("text", x = 5, y = 2, 
+           label = make_beta_string(optimal_con_tt), parse = TRUE, size = size_anno)
   
 
 tt <- Effect("Accepts", optimal_spill_tt$full_model, xlevels = list(Accepts = xvar))
@@ -1043,7 +1070,9 @@ ptt_spill <-
   geom_line(data = tmp_df, mapping = aes(x = x, y = fit)) +
   coord_cartesian(xlim = c(2.5, 6.2), ylim = min_spill, expand = FALSE) +
   xlab(xlab_text) + ylab("log(RT) in seconds") +
-  ggtitle("Total Reading Time: Spillover")
+  ggtitle("Total Reading Time: Spillover") +
+  annotate("text", x = 5, y = 3, 
+           label = make_beta_string(optimal_spill_tt), parse = TRUE, size = size_anno)
 
 
 grid.arrange(pfp_con, pfp_spill, pro_con, pro_spill, prp_con, prp_spill, ptt_con, ptt_spill,  ncol = 4, as.table = FALSE)
@@ -1051,7 +1080,6 @@ grid.arrange(pfp_con, pfp_spill, pro_con, pro_spill, prp_con, prp_spill, ptt_con
 
 ```{r, echo=FALSE, results='hide'}
 pdf("figure2.pdf", width = 13.5, height = 6)
-
 grid.arrange(pfp_con, pfp_spill, pro_con, pro_spill, prp_con, prp_spill, ptt_con, ptt_spill,  ncol = 4, as.table = FALSE)
 dev.off()
 

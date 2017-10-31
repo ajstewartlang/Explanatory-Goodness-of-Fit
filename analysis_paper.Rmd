@@ -18,10 +18,14 @@ require(afex)
 require(lattice) # for qqmath
 require(gridExtra)
 library(ggthemes)
-theme_set(theme_light())
+theme_new <- theme_light() + 
+  theme(text=element_text(family="Inconsolata"))
+theme_set(theme_new)
 require(DHARMa) # for residual analysis of GLMMs
 require(effects)
-
+require(extrafont)
+loadfonts()
+windowsFonts(Inconsolata=windowsFont("TT Inconsolata"))
 ```
 
 # Rating Data
@@ -938,7 +942,7 @@ knitr::kable(nice(optimal_spill_tt), caption = "Total Reading Times: Spillover")
 
 
 
-### Summary FP
+### Summary All Models
 
 ```{r, fig.width=8, fig.height=4, eval=TRUE}
 

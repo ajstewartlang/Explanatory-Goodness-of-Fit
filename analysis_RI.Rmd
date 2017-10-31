@@ -1,5 +1,5 @@
 ---
-title: "Analysis of First Pass Regressions Out "
+title: "Analysis of First Pass Regressions In "
 author: "Henrik Singmann"
 output: 
   html_document:

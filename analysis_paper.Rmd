@@ -979,7 +979,8 @@ pfp_con <- ggplot() +
   xlab(xlab_text) + ylab("log(RT) in seconds") +
   ggtitle("FP Reading Time: Consequent") +
   annotate("text", x = 5, y = 2, 
-           label = make_beta_string(optimal_con_fp), parse = TRUE, size = size_anno)
+           label = make_beta_string(optimal_con_fp), parse = TRUE, size = size_anno,
+           family="Inconsolata")
   
 
 tt <- Effect("Accepts", optimal_spill_fp$full_model, xlevels = list(Accepts = xvar))
@@ -993,7 +994,8 @@ pfp_spill <-
   xlab(xlab_text) + ylab("log(RT) in seconds") +
   ggtitle("FP Reading Time: Spillover") +
   annotate("text", x = 5, y = 3, 
-           label = make_beta_string(optimal_spill_fp), parse = TRUE, size = size_anno)
+           label = make_beta_string(optimal_spill_fp), parse = TRUE, size = size_anno,
+           family="Inconsolata")
 
 tt <- Effect("Accepts", optimal_con_ro$full_model, xlevels = list(Accepts = xvar))
 tmp_df <- data.frame(x = tt$variables$Accepts$levels, min = tt$lower, max = tt$upper, fit = tt$fit)
@@ -1006,8 +1008,9 @@ pro_con <- ggplot() +
   coord_cartesian(xlim = c(2.5, 6.2), ylim = ylim_bin, expand = FALSE) +
   xlab(xlab_text) + ylab("P(Regressions Out)") +
   ggtitle("FP Regressions Out: Consequent") +
-  annotate("text", x = 5, y = 0.85, 
-           label = make_beta_string(optimal_con_ro), parse = TRUE, size = size_anno)
+  annotate("text", x = 4.85, y = 0.88, 
+           label = make_beta_string(optimal_con_ro), parse = TRUE, size = size_anno,
+           family="Inconsolata")
 
 tt <- Effect("Accepts", optimal_spill_ro$full_model, xlevels = list(Accepts = xvar))
 tmp_df <- data.frame(x = tt$variables$Accepts$levels, min = tt$lower, max = tt$upper, fit = tt$fit)
@@ -1021,8 +1024,9 @@ pro_spill <-
   coord_cartesian(xlim = c(2.5, 6.2), ylim = ylim_bin, expand = FALSE) +
   xlab(xlab_text) + ylab("P(Regressions Out)") +
   ggtitle("FP Regressions Out: Spillover") +
-  annotate("text", x = 5, y = 0.85, 
-           label = make_beta_string(optimal_spill_ro), parse = TRUE, size = size_anno)
+  annotate("text", x = 4.85, y = 0.88, 
+           label = make_beta_string(optimal_spill_ro), parse = TRUE, size = size_anno,
+           family="Inconsolata")
 
 
 tt <- Effect("Accepts", optimal_con_rp$full_model, xlevels = list(Accepts = xvar))
@@ -1035,7 +1039,8 @@ prp_con <- ggplot() +
   xlab(xlab_text) + ylab("log(RT) in seconds") +
   ggtitle("RP Reading Time: Consequent") +
   annotate("text", x = 5, y = 2, 
-           label = make_beta_string(optimal_con_rp), parse = TRUE, size = size_anno)
+           label = make_beta_string(optimal_con_rp), parse = TRUE, size = size_anno,
+           family="Inconsolata")
   
 
 tt <- Effect("Accepts", optimal_spill_rp$full_model, xlevels = list(Accepts = xvar))
@@ -1049,7 +1054,8 @@ prp_spill <-
   xlab(xlab_text) + ylab("log(RT) in seconds") +
   ggtitle("RP Reading Time: Spillover") +
   annotate("text", x = 5, y = 3, 
-           label = make_beta_string(optimal_spill_rp), parse = TRUE, size = size_anno)
+           label = make_beta_string(optimal_spill_rp), parse = TRUE, size = size_anno,
+           family="Inconsolata")
 
 
 tt <- Effect("Accepts", optimal_con_tt$full_model, xlevels = list(Accepts = xvar))
@@ -1062,7 +1068,8 @@ ptt_con <- ggplot() +
   xlab(xlab_text) + ylab("log(RT) in seconds") +
   ggtitle("Total Reading Time: Consequent") +
   annotate("text", x = 5, y = 2, 
-           label = make_beta_string(optimal_con_tt), parse = TRUE, size = size_anno)
+           label = make_beta_string(optimal_con_tt), parse = TRUE, size = size_anno,
+           family="Inconsolata")
   
 
 tt <- Effect("Accepts", optimal_spill_tt$full_model, xlevels = list(Accepts = xvar))
@@ -1076,7 +1083,8 @@ ptt_spill <-
   xlab(xlab_text) + ylab("log(RT) in seconds") +
   ggtitle("Total Reading Time: Spillover") +
   annotate("text", x = 5, y = 3, 
-           label = make_beta_string(optimal_spill_tt), parse = TRUE, size = size_anno)
+           label = make_beta_string(optimal_spill_tt), parse = TRUE, size = size_anno,
+           family="Inconsolata")
 
 
 grid.arrange(pfp_con, pfp_spill, pro_con, pro_spill, prp_con, prp_spill, ptt_con, ptt_spill,  ncol = 4, as.table = FALSE)

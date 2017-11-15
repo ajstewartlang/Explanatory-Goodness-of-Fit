@@ -10,27 +10,26 @@ date: "`r format(Sys.time(), '%d %B, %Y')`"
 
 
 ```{r setup, results='hide', message=FALSE}
-require(dplyr)
-require(tidyr)
-require(stringr)
-require(ggplot2)
-require(afex)
-require(lattice) # for qqmath
-require(gridExtra)
-#library(ggthemes)
-# requires Avenir font as '.ttf' (NOT .otf!)
-# available from: https://profont.net/fonts/avenir-45-book-font-download.html
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(afex)
+library(lattice) # for qqmath
+library(gridExtra)
+library("showtext")
+library("Cairo")
+font_add_google("Open Sans", "open_sans")
+showtext_auto()
+
 theme_new <- theme_minimal() + 
-  theme(text=element_text(family="Avenir")) +
+  theme(text=element_text(family="open_sans")) +
   theme(axis.line = element_line(size = 1, colour = "black")) +
   theme(plot.title = element_text(size = rel(1.2), hjust = 0.5, face = "bold"))
 theme_set(theme_new)
 
-require(DHARMa) # for residual analysis of GLMMs
-require(effects)
-require(extrafont)
-loadfonts()
-#windowsFonts(Inconsolata=windowsFont("TT Inconsolata"))
+library(DHARMa) # for residual analysis of GLMMs
+library(effects)
 ```
 
 # Rating Data
@@ -68,7 +67,7 @@ p1_paper <-
   stat_summary(fun.y = "mean", colour = "red", size = 2.5, geom = "point", shape = 17) +
   labs(x = "Explanatory Fit", y = "Acceptability Ratings")
 
-pdf("fig_fit.pdf", width = 2, height = 2.75)
+pdf("fig_fit.pdf", width = 2.5, height = 3)
 p1_paper
 dev.off()
 
@@ -949,7 +948,7 @@ knitr::kable(nice(optimal_spill_tt), caption = "Total Reading Times: Spillover")
 
 ### Summary All Models
 
-```{r, fig.width=8, fig.height=4, eval=TRUE}
+```{r, fig.width=13.5, fig.height=6, eval=TRUE}
 
 min_con <- c(-2.25, 2.3)
 min_spill <- c(-2.1, 3.3)
@@ -985,7 +984,7 @@ pfp_con <- ggplot() +
   ggtitle("FP Reading Time: Consequent") +
   annotate("text", x = 5, y = 2, 
            label = make_beta_string(optimal_con_fp), parse = TRUE, size = size_anno,
-           family="Avenir")
+           family="open_sans")
   
 
 tt <- Effect("Accepts", optimal_spill_fp$full_model, xlevels = list(Accepts = xvar))
@@ -1000,7 +999,7 @@ pfp_spill <-
   ggtitle("FP Reading Time: Spillover") +
   annotate("text", x = 5, y = 3, 
            label = make_beta_string(optimal_spill_fp), parse = TRUE, size = size_anno,
-           family="Avenir")
+           family="open_sans")
 
 tt <- Effect("Accepts", optimal_con_ro$full_model, xlevels = list(Accepts = xvar))
 tmp_df <- data.frame(x = tt$variables$Accepts$levels, min = tt$lower, max = tt$upper, fit = tt$fit)
@@ -1015,7 +1014,7 @@ pro_con <- ggplot() +
   ggtitle("FP Regressions Out: Consequent") +
   annotate("text", x = 4.85, y = 0.88, 
            label = make_beta_string(optimal_con_ro), parse = TRUE, size = size_anno,
-           family="Avenir")
+           family="open_sans")
 
 tt <- Effect("Accepts", optimal_spill_ro$full_model, xlevels = list(Accepts = xvar))
 tmp_df <- data.frame(x = tt$variables$Accepts$levels, min = tt$lower, max = tt$upper, fit = tt$fit)
@@ -1031,7 +1030,7 @@ pro_spill <-
   ggtitle("FP Regressions Out: Spillover") +
   annotate("text", x = 4.85, y = 0.88, 
            label = make_beta_string(optimal_spill_ro), parse = TRUE, size = size_anno,
-           family="Avenir")
+           family="open_sans")
 
 
 tt <- Effect("Accepts", optimal_con_rp$full_model, xlevels = list(Accepts = xvar))
@@ -1045,7 +1044,7 @@ prp_con <- ggplot() +
   ggtitle("RP Reading Time: Consequent") +
   annotate("text", x = 5, y = 2, 
            label = make_beta_string(optimal_con_rp), parse = TRUE, size = size_anno,
-           family="Avenir")
+           family="open_sans")
   
 
 tt <- Effect("Accepts", optimal_spill_rp$full_model, xlevels = list(Accepts = xvar))
@@ -1060,7 +1059,7 @@ prp_spill <-
   ggtitle("RP Reading Time: Spillover") +
   annotate("text", x = 5, y = 3, 
            label = make_beta_string(optimal_spill_rp), parse = TRUE, size = size_anno,
-           family="Avenir")
+           family="open_sans")
 
 
 tt <- Effect("Accepts", optimal_con_tt$full_model, xlevels = list(Accepts = xvar))
@@ -1074,7 +1073,7 @@ ptt_con <- ggplot() +
   ggtitle("Total Reading Time: Consequent") +
   annotate("text", x = 5, y = 2, 
            label = make_beta_string(optimal_con_tt), parse = TRUE, size = size_anno,
-           family="Avenir")
+           family="open_sans")
   
 
 tt <- Effect("Accepts", optimal_spill_tt$full_model, xlevels = list(Accepts = xvar))
@@ -1089,16 +1088,13 @@ ptt_spill <-
   ggtitle("Total Reading Time: Spillover") +
   annotate("text", x = 5, y = 3, 
            label = make_beta_string(optimal_spill_tt), parse = TRUE, size = size_anno,
-           family="Avenir")
+           family="open_sans")
 
 
-grid.arrange(pfp_con, pfp_spill, pro_con, pro_spill, prp_con, prp_spill, ptt_con, ptt_spill,  ncol = 4, as.table = FALSE)
+pp <- grid.arrange(pfp_con, pfp_spill, pro_con, pro_spill, prp_con, prp_spill, ptt_con, ptt_spill,  ncol = 4, as.table = FALSE)
 ```
 
 ```{r, echo=FALSE, results='hide'}
-pdf("figure2.pdf", width = 13.5, height = 6)
-grid.arrange(pfp_con, pfp_spill, pro_con, pro_spill, prp_con, prp_spill, ptt_con, ptt_spill,  ncol = 4, as.table = FALSE)
-dev.off()
-
+ggsave("figure2.pdf", plot = pp, width = 13.5, height = 6, device = cairo_pdf)
 ```
 
